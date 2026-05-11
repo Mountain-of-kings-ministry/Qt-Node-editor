@@ -1,0 +1,29 @@
+[
+  {
+    "label": "configure (debug)",
+    "command": "cmake",
+    "args": ["--preset", "debug"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "reveal": "always",
+    "use_new_terminal": true,
+  },
+  {
+    "label": "build",
+    "command": "cmake",
+    "args": ["--build", "--preset", "debug"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "reveal": "always",
+    "use_new_terminal": true,
+  },
+  {
+    "label": "run",
+    "command": "sh",
+    "args": [
+      "-c",
+      "cmake --build --preset debug -j 8 && exec '$ZED_WORKTREE_ROOT/build/debug/examples/Demo/NodeEditorDemoApp'",
+    ],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "reveal": "always",
+    "use_new_terminal": true,
+  },
+]

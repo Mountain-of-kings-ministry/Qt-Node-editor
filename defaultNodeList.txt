@@ -1,0 +1,791 @@
+That’s a strong direction for a Qt 6.11 node editor library. Adding built-in “core categories” makes the system feel immediately usable instead of purely infrastructural.
+
+Here’s a clean, scalable category structure that works well for visual scripting/node-graph systems.
+
+---
+
+# Recommended Built-In Categories
+
+## 1. Math
+
+Purpose:
+Numerical operations, scalar/vector calculations, interpolation, conversions.
+
+### Basic Operations
+
+* Add
+* Subtract
+* Multiply
+* Divide
+* Modulo
+* Power
+* Square Root
+* Absolute
+* Negate
+
+### Comparison
+
+* Equal
+* Not Equal
+* Greater Than
+* Less Than
+* Clamp
+* Min
+* Max
+
+### Advanced
+
+* Lerp
+* Smoothstep
+* Round
+* Floor
+* Ceil
+* Fract
+* Sign
+* Normalize
+
+### Trigonometry
+
+* Sin
+* Cos
+* Tan
+* ASin
+* ACos
+* ATan
+
+### Vector Nodes
+
+* Vec2
+* Vec3
+* Vec4
+* Dot Product
+* Cross Product
+* Length
+* Distance
+
+### Random
+
+* Random Float
+* Random Integer
+* Noise
+* Seed Random
+
+---
+
+# 2. Script
+
+Purpose:
+Quick execution without users building custom nodes manually.
+
+You should strongly sandbox this category.
+
+### Generic Script Node
+
+Inputs:
+
+* Script
+* Variables map
+
+Outputs:
+
+* Result
+* Error
+* Success
+
+### Script Types
+
+* JavaScript
+* Python
+* JSON Transform
+* Lua (highly recommended)
+* C Expression
+* C++ Expression
+
+---
+
+## Important Recommendation
+
+Avoid full runtime C/C++ compilation inside editor by default.
+
+Instead:
+
+* use:
+
+  * JavaScript
+  * Lua
+  * Python
+
+### Better Architecture
+
+```text
+Script
+ ├── JavaScript
+ ├── Python
+ ├── Lua
+ └── Native Plugin Node
+```
+
+That scales much better.
+
+---
+
+# 3. Utility
+
+Purpose:
+General-purpose helper nodes.
+
+### Flow
+
+* Sequence
+* Branch
+* Switch
+* Gate
+* Delay
+* Timer
+
+### Value Utilities
+
+* Reroute
+* Cache
+* Constant
+* Debug Print
+* Watch
+* Type Convert
+
+### Collections
+
+* Make Array
+* Append Array
+* Remove Array Item
+* Length
+* Contains
+
+### String Utilities
+
+* Concat
+* Split
+* Replace
+* Regex
+* To Upper
+* To Lower
+
+### UUID / Hash
+
+* UUID Generate
+* MD5
+* SHA256
+
+---
+
+# 4. Color
+
+Purpose:
+Very useful in UI/material/graphics workflows.
+
+### Color Basics
+
+* RGB Color
+* HSV Color
+* Hex Color
+* Color From String
+
+### Manipulation
+
+* Blend Colors
+* Multiply Color
+* Invert
+* Saturation
+* Brightness
+* Contrast
+
+### Conversion
+
+* RGB ↔ HSV
+* RGB ↔ HEX
+
+### Palette
+
+* Gradient
+* Palette Generator
+
+---
+
+# 5. Logic
+
+Should be separate from Math.
+
+### Nodes
+
+* AND
+* OR
+* XOR
+* NOT
+* Boolean Compare
+* Is True
+* Is False
+
+---
+
+# 6. Events
+
+Essential for visual scripting.
+
+### Nodes
+
+* Begin
+* Tick
+* Timer Event
+* Input Event
+* Signal Event
+* Property Changed
+
+---
+
+# 7. Data
+
+Very important for real projects.
+
+### JSON
+
+* Parse JSON
+* JSON Get
+* JSON Set
+* JSON Array
+
+### Serialization
+
+* Serialize Object
+* Deserialize Object
+
+### File I/O
+
+* Read File
+* Write File
+* CSV Parse
+
+---
+
+# 8. Qt Integration
+
+This becomes your killer feature.
+
+### QObject Nodes
+
+* Connect Signal
+* Emit Signal
+* Set Property
+* Get Property
+* Invoke Method
+
+### Widgets
+
+* Button Clicked
+* Slider Value
+* Text Changed
+
+### QML
+
+* QML Property
+* QML Signal
+
+---
+
+# 9. System
+
+### Nodes
+
+* Current Time
+* Environment Variable
+* OS Info
+* Clipboard
+* Process Execute
+
+---
+
+# 10. Network
+
+Very attractive category.
+
+### HTTP
+
+* GET
+* POST
+* Download File
+
+### WebSocket
+
+* Connect
+* Send
+* Receive
+
+---
+
+# Recommended Architecture
+
+Instead of hardcoding categories:
+
+```cpp
+struct NodeCategory
+{
+    QString id;
+    QString displayName;
+    QString icon;
+    QColor color;
+};
+```
+
+Then register nodes dynamically:
+
+```cpp
+registerNode<AddNode>("math/basic");
+registerNode<ColorBlendNode>("utility/color");
+```
+
+This gives:
+
+* plugin extensibility
+* searchable hierarchy
+* future marketplace support
+
+---
+
+# Strong Recommendation: Default “Quick Nodes”
+
+Users LOVE immediate usability.
+
+Provide:
+
+* constants
+* print/debug
+* basic math
+* branch
+* reroute
+* string concat
+* color picker
+
+out of the box.
+
+That removes friction instantly.
+
+---
+
+# Suggested Final Default Package
+
+```text
+Core
+ ├── Math
+ ├── Logic
+ ├── Utility
+ ├── Script
+ ├── Events
+ ├── Data
+ ├── Color
+ ├── Network
+ ├── Qt
+ └── System
+```
+
+Yes — you should absolutely have an **Output category**.
+Without outputs, node graphs feel incomplete because users can calculate data but not “materialize” it into something visible/audible/exportable.
+
+For a Qt-based editor, outputs can become one of the most powerful parts of the ecosystem.
+
+---
+
+# Recommended Output Categories
+
+```text
+Output
+ ├── Visual
+ ├── Audio
+ ├── Data
+ ├── Device
+ ├── Debug
+ └── Streaming
+```
+
+---
+
+# 1. Visual Output
+
+These are your “render/display” nodes.
+
+## Core Nodes
+
+### Image Output
+
+Displays:
+
+* QImage
+* QPixmap
+* textures
+
+Inputs:
+
+* image
+* width
+* height
+
+---
+
+### Video Output
+
+Inputs:
+
+* frames
+* fps
+* resolution
+
+Outputs to:
+
+* preview window
+* file encoder
+* stream
+
+Backends:
+
+* FFmpeg
+* Qt Multimedia
+
+---
+
+### Viewport Output
+
+Real-time rendering surface.
+
+Useful for:
+
+* shaders
+* procedural graphics
+* simulations
+* node previews
+
+Could internally use:
+
+* QOpenGLWidget
+* QRhi
+* Vulkan/Metal abstraction
+
+---
+
+### Pixel Buffer Output
+
+Low-level framebuffer manipulation.
+
+Perfect for:
+
+* generative art
+* software rendering
+* image processing
+
+---
+
+# 2. Audio Output
+
+This is HUGE for procedural systems.
+
+---
+
+## Basic Nodes
+
+### Audio Output
+
+Inputs:
+
+* audio buffer
+* volume
+* sample rate
+
+Backend:
+
+* Qt Multimedia
+* RtAudio
+* PortAudio
+
+---
+
+### Sine Wave Generator
+
+Inputs:
+
+* frequency
+* amplitude
+* phase
+
+Outputs:
+
+* audio signal
+
+You mentioned this already — definitely include it.
+
+---
+
+### Oscillators
+
+* Sine
+* Square
+* Triangle
+* Sawtooth
+* Noise
+
+---
+
+### Audio Effects
+
+* Gain
+* Delay
+* Reverb
+* Distortion
+* Low Pass Filter
+* High Pass Filter
+
+---
+
+### Audio Analyzer
+
+Outputs:
+
+* FFT
+* spectrum
+* peak
+* RMS
+
+Useful for:
+
+* reactive visuals
+* VJ systems
+* visualization
+
+---
+
+# 3. Data Output
+
+Allows exporting and persistence.
+
+---
+
+## Nodes
+
+### File Writer
+
+Outputs:
+
+* text
+* binary
+* json
+* csv
+
+---
+
+### JSON Export
+
+Takes graph data and serializes it.
+
+---
+
+### Database Output
+
+* SQLite
+* PostgreSQL
+* MySQL
+
+Qt already makes SQL easy.
+
+---
+
+# 4. Device Output
+
+This becomes extremely powerful.
+
+---
+
+## Hardware Nodes
+
+### Serial Output
+
+Arduino/embedded workflows.
+
+### MIDI Output
+
+Music tooling.
+
+### OSC Output
+
+Creative coding standard.
+
+### DMX Output
+
+Lighting systems.
+
+### GPIO Output
+
+Raspberry Pi workflows.
+
+---
+
+# 5. Debug Output
+
+Essential for graph development.
+
+---
+
+## Nodes
+
+### Print
+
+### Logger
+
+### Graph Inspector
+
+### Watch Value
+
+### Performance Monitor
+
+You NEED these early.
+
+---
+
+# 6. Streaming Output
+
+Modern node systems benefit massively from this.
+
+---
+
+## Nodes
+
+### RTSP Stream
+
+### WebSocket Stream
+
+### UDP Output
+
+### TCP Output
+
+### NDI Output
+
+### Spout/Syphon
+
+This pushes your editor toward:
+
+* broadcast tools
+* VJ software
+* creative coding
+* live systems
+
+---
+
+# VERY IMPORTANT:
+
+# Separate “Generator” vs “Output”
+
+These are different concepts.
+
+---
+
+## Generator Nodes
+
+Produce data.
+
+Examples:
+
+* Sine Wave
+* Noise
+* Gradient
+* Oscillator
+* Camera Feed
+
+---
+
+## Output Nodes
+
+Consume final data.
+
+Examples:
+
+* Audio Device
+* Video Window
+* File Writer
+* Stream Output
+
+---
+
+# Example Graph
+
+```text
+[Sine Generator]
+        ↓
+[Gain]
+        ↓
+[Audio Output]
+```
+
+or
+
+```text
+[Noise]
+   ↓
+[Color Gradient]
+   ↓
+[Viewport Output]
+```
+
+This distinction is architecturally VERY important.
+
+---
+
+# Strong Recommendation:
+
+# Add “Previewable Outputs”
+
+Every output node should optionally:
+
+* embed a live preview
+* expose statistics
+* expose timing/FPS
+
+Example:
+
+* audio waveform preview
+* video thumbnail
+* FFT graph
+
+Users LOVE visual feedback.
+
+---
+
+# Suggested Top-Level Built-In Categories
+
+```text
+Core
+ ├── Math
+ ├── Logic
+ ├── Utility
+ ├── Script
+ ├── Events
+ ├── Data
+ ├── Color
+ ├── Audio
+ ├── Video
+ ├── Generators
+ ├── Output
+ ├── Qt
+ ├── Network
+ ├── Device
+ └── Debug
+```
+
+---
+
+# Killer Feature Opportunity
+
+If you combine:
+
+* node graphs
+* Qt widgets
+* audio/video outputs
+* scripting
+* GPU rendering
+
+the last feature will be custom node creation.
+where users can define their own node types. and data output so that they can build custom node graphs.
+and process data in real-time.

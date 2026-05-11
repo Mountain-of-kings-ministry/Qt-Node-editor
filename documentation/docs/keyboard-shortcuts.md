@@ -1,0 +1,33 @@
+# Keyboard Shortcuts
+
+| Shortcut | Action |
+|---|---|
+| `Ctrl+Z` | Undo |
+| `Ctrl+Shift+Z` / `Ctrl+Y` | Redo |
+| `Shift+A` | Open Add Node popup |
+| `Delete` / `Backspace` | Delete selected node |
+| `Ctrl+D` | Duplicate selected node |
+| `Shift+D` | Duplicate selected node |
+| `Ctrl+S` | Save graph to file |
+| `Ctrl+N` | New empty graph |
+| `Ctrl+O` | Open graph file |
+| `F` | Fit all nodes to view |
+| `Shift+V` | Focus view on selected node |
+| `Ctrl+Click` | Toggle multi-select |
+| `Shift+Drag` | Box-select multiple nodes |
+| `Middle-click drag` | Pan canvas |
+| `Right-click drag` | Pan canvas |
+| `Scroll wheel` | Zoom in/out |
+| `Shift+Click node body` | Add to selection (box-select mode) |
+| `Right-click edge` | Delete edge |
+| `Escape` | Close Add Node popup / Cancel selection |
+
+## Mouse Controls
+
+| Action | Result |
+|---|---|
+| Drag node header | Move node |
+| Drag from output port | Create connection |
+| Release on input port | Complete connection |
+| Click node body | Select node |
+| Click empty canvas | Deselect all |

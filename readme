@@ -1,0 +1,235 @@
+**Here is the clean, complete, and properly composed Markdown guide** as you requested:
+
+---
+
+```markdown
+# MyNodeEditor – Professional Data Flow Node Editor (Qt 6.11)
+
+**Target UI Style**: Unreal Engine Blueprints / Blender Node Editor
+**Goal**: Clean, modern, dark-themed node editor with automatic **data flow** processing.
+
+---
+
+## Project Goal
+
+Create a reusable, high-quality node editor where nodes process and automatically propagate data downstream when inputs change.
+The UI should feel professional like Unreal Engine Blueprints or Blender:
+- Dark theme
+- Left palette/sidebar
+- Central zoomable pannable canvas
+- Right properties panel
+- Top menu bar
+- Optional minimap and status bar
+
+---
+
+## 1. Technology Choice (Recommended)
+
+**Qt Quick (QML) + C++ Backend**
+
+**Why this is the best approach**:
+- Smoother zooming, panning, and gestures
+- Modern dark UI and styling is much easier
+- Better suited to match Unreal/Blender look and feel
+- Since your current project already uses QML, this integrates more naturally
+- Good performance with proper implementation
+
+**Alternative**: Pure `QGraphicsView` (Widgets) – possible but less ideal for modern UI/feel.
+
+---
+
+## 2. Project Structure (Designed for Reusability)
+
+```bash
+MyNodeEditor/                      # ← Will become a reusable library
+├── CMakeLists.txt
+├── NodeEditor/
+│   ├── include/NodeEditor/        # Public headers (clean API)
+│   ├── src/                       # Private source
+│   │   ├── backend/
+│   │   ├── nodes/
+│   │   └── ui/
+│   ├── qml/                       # All QML components
+│   └── resources.qrc
+├── examples/
+│   └── Demo/                      # Standalone demo application
+└── MyMainProject/                 # ← Your existing or future project
+```
+
+---
+
+## 3. Core Architecture
+
+### Backend (C++)
+- `GraphModel` – Pure data model (nodes + connections)
+- `DataFlowEngine` – Topological sort + automatic data propagation
+- `BaseNode` – Abstract base class with `compute()` virtual method
+- Custom nodes inherit from `BaseNode`
+
+### Frontend (QML)
+- `NodeCanvas.qml` – Main interactive canvas
+- `Node.qml` – Draggable node with header, body and ports
+- `Edge.qml` – Smooth Bézier connections
+- `Port.qml` – Input/output connection points (colored by type)
+- `NodePalette.qml` + `PropertiesPanel.qml`
+
+---
+
+## 4. CMakeLists.txt (Library + Demo)
+
+```cmake
+cmake_minimum_required(VERSION 3.22)
+project(MyNodeEditor LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+
+find_package(Qt6 REQUIRED COMPONENTS
+    Core Gui Qml Quick QuickControls2
+)
+
+qt_standard_project_setup()
+
+# ====================== NODE EDITOR LIBRARY ======================
+qt_add_library(NodeEditor STATIC)
+
+qt_add_qml_module(NodeEditor
+    URI "NodeEditor"
+    VERSION 1.0
+    QML_FILES
+        qml/NodeCanvas.qml
+        qml/Node.qml
+        qml/Edge.qml
+        qml/Port.qml
+        qml/NodePalette.qml
+        qml/PropertiesPanel.qml
+    SOURCES
+        src/backend/GraphModel.cpp
+        src/backend/DataFlowEngine.cpp
+        src/nodes/BaseNode.cpp
+        # Add your custom nodes here
+)
+
+target_include_directories(NodeEditor PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/NodeEditor/include
+)
+
+target_link_libraries(NodeEditor PRIVATE
+    Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick
+)
+
+# ====================== DEMO APPLICATION ======================
+qt_add_executable(NodeEditorDemo
+    examples/Demo/main.cpp
+)
+
+target_link_libraries(NodeEditorDemo PRIVATE NodeEditor)
+```
+
+---
+
+## 5. Step-by-Step Implementation Plan
+
+### Phase 1 – Foundation
+1. Create project with the structure and CMake above
+2. Implement basic `ApplicationWindow` with `SplitView` (Palette | Canvas | Properties)
+3. Create draggable `Node.qml` component
+4. Implement `Port.qml` and basic connection logic
+
+### Phase 2 – Core Features
+5. Build smooth zoomable canvas with grid background
+6. Implement Bézier `Edge.qml`
+7. Create `GraphModel` and expose it to QML
+8. Build `DataFlowEngine` with automatic propagation
+
+### Phase 3 – Polish & Integration
+9. Node palette with drag & drop creation
+10. Properties panel (dynamic)
+11. Dark professional styling
+12. JSON save/load + undo/redo (optional)
+
+---
+
+## 6. Data Flow & Propagation
+
+- Nodes use `QVariant` (or custom typed variant) for inputs/outputs
+- `DataFlowEngine` detects changes → marks downstream nodes dirty
+- Executes nodes in topological order (Kahn’s algorithm recommended)
+- Signals update QML visuals automatically
+
+---
+
+## 7. Styling (Unreal/Blender Style)
+
+- Background: `#1E1E1E`
+- Node header: Type-specific accent color
+- Node body: `#2A2A2A`
+- Grid: subtle lines `#333333`
+- Selection: `#00B4FF`
+- Connection curves: thickness + glow on hover
+
+---
+
+## 8. Future Integration into Your Main Project
+
+**Yes – this design is made for easy integration.**
+
+**How to embed later**:
+
+```qml
+import NodeEditor 1.0
+
+NodeCanvas {
+    width: parent.width
+    height: parent.height
+    graphModel: myExternalGraphModel   // You can pass your own model
+}
+```
+
+You will be able to:
+- Import the `NodeEditor` module into any QML project
+- Register custom nodes from your main application
+- Embed the canvas as a component
+- Communicate bidirectionally with the graph
+
+---
+
+## 9. Build Instructions
+
+```bash
+mkdir build && cd build
+
+# Linux/macOS
+cmake .. -DCMAKE_BUILD_TYPE=Debug
+cmake --build . --parallel
+
+# Windows
+cmake .. -G "Visual Studio 17 2022" -A x64
+cmake --build . --config Debug
+```
+
+Run the demo: `./NodeEditorDemo`
+
+---
+
+## Next Action
+
+Start by creating the folder structure and the `CMakeLists.txt` file above.
+
+**Tell me what you want next**:
+
+1. Full code for `NodeCanvas.qml` + zoom/pan
+2. Full `Node.qml` with ports and dragging
+3. `GraphModel.h` + `.cpp` (backend)
+4. `DataFlowEngine` with propagation logic
+5. Something else
+
+Just reply with the number or describe what you need.
+
+---
+
+Copy everything above into a file named `NODE_EDITOR_GUIDE.md`.
+
+This version is clean, professional, and ready for both standalone use and future integration into your other project.
+Let me know what to write next.

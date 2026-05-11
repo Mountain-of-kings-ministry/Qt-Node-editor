@@ -1,0 +1,23 @@
+{
+  "cmake.sourceDirectory": "${workspaceFolder}/code",
+
+  "file_scan_exclusions": [
+    "**/.git",
+    "**/.svn",
+    "**/.hg",
+    "**/.jj",
+    "**/CVS",
+    "**/.DS_Store",
+    "**/Thumbs.db",
+    "**/.classpath",
+    "**/.settings",
+
+    "**/code/third_parties/**",
+    "**/third_parties/**",
+    "**/backup/**",
+    "**/code/vcpkg_installed/**",
+    "**/code/resources/icons/**",
+    "**/code/resources/status_icons/**",
+    "**/documentation/node_modules/**",
+  ],
+}

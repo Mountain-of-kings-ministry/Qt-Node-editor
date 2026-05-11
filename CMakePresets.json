@@ -1,0 +1,51 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "default",
+      "displayName": "Release",
+      "description": "Default release build with vcpkg",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_PREFIX_PATH": "$env{HOME}/Qt/6.11.0/gcc_64"
+      }
+    },
+    {
+      "name": "debug",
+      "displayName": "Debug",
+      "description": "Debug build with vcpkg",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_PREFIX_PATH": "$env{HOME}/Qt/6.11.0/gcc_64"
+      }
+    },
+    {
+      "name": "full",
+      "displayName": "Full features",
+      "description": "Release build with all optional components",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_PREFIX_PATH": "$env{HOME}/Qt/6.11.0/gcc_64",
+        "MOKM_ENABLE_ALL": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "displayName": "Debug Build"
+    },
+    {
+      "name": "default",
+      "configurePreset": "default",
+      "displayName": "Release Build"
+    }
+  ]
+}
