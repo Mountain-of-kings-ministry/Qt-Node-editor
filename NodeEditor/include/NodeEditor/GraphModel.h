@@ -111,6 +111,9 @@ public:
     Q_INVOKABLE bool qmlLoadFromFile(const QString &path);
     Q_INVOKABLE void clear();
 
+    // Copy registrations from another model (for multi-tab support)
+    Q_INVOKABLE void qmlCopyRegistryFrom(GraphModel *source);
+
     // QML-friendly API (uses QString for IDs)
     Q_INVOKABLE QString qmlAddNode(const QString &type, double x, double y);
     Q_INVOKABLE void qmlRemoveNode(const QString &nodeId);

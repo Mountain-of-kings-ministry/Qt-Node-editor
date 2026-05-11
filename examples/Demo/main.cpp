@@ -14,12 +14,12 @@ int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
 
-    qmlRegisterUncreatableType<GraphModel>("NodeEditor", 1, 0, "GraphModel", "Use context property");
-
-    GraphModel model;
-    DataFlowEngine engine(&model);
+    qmlRegisterType<GraphModel>("NodeEditor", 1, 0, "GraphModel");
+    qmlRegisterType<UndoManager>("NodeEditor", 1, 0, "UndoManager");
+    qmlRegisterType<DataFlowEngine>("NodeEditor", 1, 0, "DataFlowEngine");
 
     // Register categories
+    GraphModel model;
     model.registerCategory({"Input", "Input", QColor("#4CDF8B")});
     model.registerCategory({"Math", "Math", QColor("#FF9F43")});
     model.registerCategory({"Output", "Output", QColor("#FF6B6B")});
@@ -63,36 +63,19 @@ int main(int argc, char *argv[])
     outputInfo.subCategory = "Debug";
     model.registerNodeType("Output", outputInfo);
 
-    // Auto-propagate when data changes or nodes/edges are added
-    QObject::connect(&model, &GraphModel::nodeDataChanged, [&](const QUuid &nodeId, const QString &) {
-        engine.processNodeChange(nodeId);
-    });
-    QObject::connect(&model, &GraphModel::nodeAdded, [&](const QUuid &nodeId) {
-        engine.processNodeChange(nodeId);
-    });
-    QObject::connect(&model, &GraphModel::edgeAdded, [&](const QUuid &edgeId) {
-        for (const auto &e : model.edges())
-            if (e.id == edgeId) {
-                engine.processNodeChange(e.targetNodeId);
-                break;
-            }
-    });
+    // Pass registration model via context property so tabs can reference it
+    QQmlApplicationEngine engine;
+    engine.rootContext()->setContextProperty("_nodeTypeRegistry", &model);
 
-    UndoManager undoManager(&model);
-    undoManager.clear();
-
-    QQmlApplicationEngine engine_qqml;
-    engine_qqml.rootContext()->setContextProperty("_graphModel", &model);
-    engine_qqml.rootContext()->setContextProperty("_undoManager", &undoManager);
-    engine_qqml.addImportPath(QCoreApplication::applicationDirPath() + "/../..");
+    engine.addImportPath(QCoreApplication::applicationDirPath() + "/../..");
 
     QObject::connect(
-        &engine_qqml,
+        &engine,
         &QQmlApplicationEngine::objectCreationFailed,
         &app,
         []() { QCoreApplication::exit(-1); },
         Qt::QueuedConnection);
-    engine_qqml.loadFromModule("NodeEditorDemo", "Main");
+    engine.loadFromModule("NodeEditorDemo", "Main");
 
     return QCoreApplication::exec();
 }

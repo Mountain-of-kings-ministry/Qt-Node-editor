@@ -4,10 +4,36 @@
 
 namespace NodeEditor {
 
+DataFlowEngine::DataFlowEngine(QObject *parent)
+    : QObject(parent)
+{
+}
+
 DataFlowEngine::DataFlowEngine(GraphModel *model, QObject *parent)
     : QObject(parent)
     , m_model(model)
 {
+    wireConnections();
+}
+
+GraphModel *DataFlowEngine::graphModel() const { return m_model; }
+
+void DataFlowEngine::setGraphModel(GraphModel *model)
+{
+    if (m_model == model) return;
+    unwireConnections();
+    m_model = model;
+    wireConnections();
+    emit graphModelChanged();
+}
+
+bool DataFlowEngine::autoCompute() const { return m_autoCompute; }
+
+void DataFlowEngine::setAutoCompute(bool enabled)
+{
+    if (m_autoCompute == enabled) return;
+    m_autoCompute = enabled;
+    emit autoComputeChanged();
 }
 
 BaseNode *DataFlowEngine::getOrCreateNode(const QString &type)
@@ -79,7 +105,7 @@ void DataFlowEngine::executeNode(const QUuid &nodeId)
 
 void DataFlowEngine::processNodeChange(const QUuid &nodeId)
 {
-    if (m_processing) return;
+    if (m_processing || !m_autoCompute || !m_model) return;
     m_processing = true;
 
     if (m_model->hasCycles()) {
@@ -105,7 +131,7 @@ void DataFlowEngine::processNodeChange(const QUuid &nodeId)
 
 void DataFlowEngine::processAll()
 {
-    if (m_model->hasCycles()) {
+    if (!m_model || m_model->hasCycles()) {
         emit cycleDetected();
         return;
     }
@@ -121,6 +147,31 @@ void DataFlowEngine::processAll()
 
     m_processing = false;
     emit propagationComplete(computed);
+}
+
+void DataFlowEngine::wireConnections()
+{
+    if (!m_model) return;
+    m_connections.append(connect(m_model, &GraphModel::nodeDataChanged, this, [this](const QUuid &nodeId, const QString &) {
+        processNodeChange(nodeId);
+    }));
+    m_connections.append(connect(m_model, &GraphModel::nodeAdded, this, [this](const QUuid &nodeId) {
+        processNodeChange(nodeId);
+    }));
+    m_connections.append(connect(m_model, &GraphModel::edgeAdded, this, [this](const QUuid &edgeId) {
+        for (const auto &e : m_model->edges())
+            if (e.id == edgeId) {
+                processNodeChange(e.targetNodeId);
+                break;
+            }
+    }));
+}
+
+void DataFlowEngine::unwireConnections()
+{
+    for (auto &c : m_connections)
+        disconnect(c);
+    m_connections.clear();
 }
 
 } // namespace NodeEditor

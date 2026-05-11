@@ -212,24 +212,45 @@ public:
 
 // ── UndoManager ──────────────────────────────────────────────
 
+UndoManager::UndoManager(QObject *parent)
+    : QObject(parent)
+{
+}
+
 UndoManager::UndoManager(GraphModel *model, QObject *parent)
     : QObject(parent)
     , m_model(model)
-    , m_stack(new QUndoStack(this))
 {
+    ensureStack();
+}
+
+UndoManager::~UndoManager() = default;
+
+GraphModel *UndoManager::graphModel() const { return m_model; }
+
+void UndoManager::setGraphModel(GraphModel *model)
+{
+    if (m_model == model) return;
+    m_model = model;
+    ensureStack();
+    emit graphModelChanged();
+}
+
+void UndoManager::ensureStack()
+{
+    if (m_stack || !m_model) return;
+    m_stack = new QUndoStack(this);
     m_stack->setUndoLimit(100);
     connect(m_stack, &QUndoStack::canUndoChanged, this, &UndoManager::canUndoChanged);
     connect(m_stack, &QUndoStack::canRedoChanged, this, &UndoManager::canRedoChanged);
 }
 
-UndoManager::~UndoManager() = default;
+void UndoManager::undo() { if (m_stack) m_stack->undo(); }
+void UndoManager::redo() { if (m_stack) m_stack->redo(); }
+void UndoManager::clear() { if (m_stack) m_stack->clear(); }
 
-void UndoManager::undo() { m_stack->undo(); }
-void UndoManager::redo() { m_stack->redo(); }
-void UndoManager::clear() { m_stack->clear(); }
-
-bool UndoManager::canUndo() const { return m_stack->canUndo(); }
-bool UndoManager::canRedo() const { return m_stack->canRedo(); }
+bool UndoManager::canUndo() const { return m_stack && m_stack->canUndo(); }
+bool UndoManager::canRedo() const { return m_stack && m_stack->canRedo(); }
 
 QString UndoManager::qmlAddNode(const QString &type, double x, double y)
 {

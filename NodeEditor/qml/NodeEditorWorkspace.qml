@@ -7,16 +7,12 @@ import NodeEditor
 Item {
     id: root
 
-    property var graphModel: null
-    property var undoManager: null
-
     property string selectedNodeId: ""
 
-    property var _appUndoManager: typeof _undoManager !== "undefined" ? _undoManager : null
-    property var _appGraphModel: typeof _graphModel !== "undefined" ? _graphModel : null
+    readonly property var _nodeRegistry: typeof _nodeTypeRegistry !== "undefined" ? _nodeTypeRegistry : null
 
-    property var effectiveGraphModel: graphModel || _appGraphModel
-    property var effectiveUndoManager: undoManager || _appUndoManager
+    readonly property var effectiveGraphModel: activeTab ? activeTab.graphModel : null
+    readonly property var effectiveUndoManager: activeTab ? activeTab.undoManager : null
 
     property real defaultZoom: 1.0
 
@@ -24,6 +20,23 @@ Item {
 
     signal nodeSelected(string nodeId)
     signal nodeDeselected()
+
+    // ── Tab Components ──────────────────────────────────────────
+    Component {
+        id: graphModelComp
+        GraphModel {}
+    }
+    Component {
+        id: undoManagerComp
+        UndoManager {}
+    }
+    Component {
+        id: engineComp
+        DataFlowEngine {}
+    }
+
+    // ── Active Tab ──────────────────────────────────────────────
+    property var activeTab: null
 
     // ── Top Bar ────────────────────────────────────────────────
     ColumnLayout {
@@ -57,11 +70,8 @@ Item {
                         y: parent.height
 
                         MenuItem {
-                            text: "New"
-                            onTriggered: {
-                                effectiveGraphModel.clear()
-                                if (effectiveUndoManager) effectiveUndoManager.clear()
-                            }
+                            text: "New Tab"
+                            onTriggered: tabModel.addTab("Canvas")
                         }
                         MenuItem {
                             text: "Open..."
@@ -75,12 +85,18 @@ Item {
                             text: "Save As..."
                             onTriggered: saveAsDialog.open()
                         }
+                        MenuItem {
+                            text: "Save All"
+                            onTriggered: saveAllGraphs()
+                        }
                         MenuSeparator {}
                         MenuItem {
                             text: "Clear All"
                             onTriggered: {
-                                effectiveGraphModel.clear()
-                                if (effectiveUndoManager) effectiveUndoManager.clear()
+                                if (activeTab) {
+                                    activeTab.graphModel.clear()
+                                    activeTab.undoManager.clear()
+                                }
                             }
                         }
                     }
@@ -192,7 +208,9 @@ Item {
                     font.pixelSize: 11
                     contentItem: Text { text: parent.text; color: "#CCCCCC"; font.pixelSize: 11 }
                     background: Rectangle { color: parent.hovered ? "#3A3A3A" : "transparent"; radius: 3 }
-                    onClicked: computeGraph()
+                    onClicked: {
+                        if (activeTab) activeTab.engine.processAll()
+                    }
                 }
                 ToolButton {
                     id: autoBtn
@@ -202,6 +220,9 @@ Item {
                     font.pixelSize: 11
                     contentItem: Text { text: parent.text; color: parent.checked ? "#4CDF8B" : "#CCCCCC"; font.pixelSize: 11 }
                     background: Rectangle { color: parent.hovered ? "#3A3A3A" : "transparent"; radius: 3 }
+                    onClicked: {
+                        if (activeTab) activeTab.engine.autoCompute = autoBtn.checked
+                    }
                 }
             }
         }
@@ -246,9 +267,11 @@ Item {
                 spacing: 2
 
                 Repeater {
+                    id: tabRepeater
                     model: tabModel
 
                     delegate: Rectangle {
+                        id: tabDelegate
                         height: 22
                         width: 120
                         radius: 3
@@ -256,18 +279,17 @@ Item {
                         border.color: active ? "#555555" : "transparent"
                         border.width: 1
 
+                        property bool renaming: false
+
                         RowLayout {
                             anchors.fill: parent
                             anchors.leftMargin: 8
                             anchors.rightMargin: 4
                             spacing: 4
 
-                            Label {
-                                text: name
-                                color: "#CCCCCC"
-                                font.pixelSize: 10
+                            Loader {
                                 Layout.fillWidth: true
-                                elide: Text.ElideRight
+                                sourceComponent: tabDelegate.renaming ? renameInput : tabLabel
                             }
 
                             Rectangle {
@@ -279,7 +301,7 @@ Item {
 
                                 Text {
                                     anchors.centerIn: parent
-                                    text: "×"
+                                    text: "\u00d7"
                                     color: "#888888"
                                     font.pixelSize: 10
                                 }
@@ -294,9 +316,52 @@ Item {
                             }
                         }
 
+                        Component {
+                            id: tabLabel
+                            Label {
+                                text: tabModel.get(index).name
+                                color: "#CCCCCC"
+                                font.pixelSize: 10
+                                elide: Text.ElideRight
+                            }
+                        }
+
+                        Component {
+                            id: renameInput
+                            TextInput {
+                                text: tabModel.get(index).name
+                                color: "#CCCCCC"
+                                font.pixelSize: 10
+                                focus: true
+                                selectByMouse: true
+                                onAccepted: {
+                                    tabModel.renameTab(index, text)
+                                    tabDelegate.renaming = false
+                                }
+                                onEditingFinished: {
+                                    tabDelegate.renaming = false
+                                }
+                                Keys.onEscapePressed: {
+                                    tabDelegate.renaming = false
+                                }
+                                Component.onCompleted: {
+                                    selectAll()
+                                    forceActiveFocus()
+                                }
+                            }
+                        }
+
                         MouseArea {
                             anchors.fill: parent
-                            onClicked: tabModel.setActive(index)
+                            acceptedButtons: Qt.LeftButton | Qt.RightButton
+                            onClicked: function(mouse) {
+                                if (mouse.button === Qt.RightButton) {
+                                    tabContextMenu.index = index
+                                    tabContextMenu.popup()
+                                } else {
+                                    tabModel.setActive(index)
+                                }
+                            }
                         }
                     }
                 }
@@ -319,7 +384,7 @@ Item {
                         id: mouseAddTab
                         anchors.fill: parent
                         hoverEnabled: true
-                        onClicked: tabModel.addTab("Canvas " + (tabModel.count + 1))
+                        onClicked: tabModel.addTab("Canvas")
                     }
                 }
 
@@ -335,8 +400,54 @@ Item {
                     anchors.rightMargin: 8
                 }
             }
+
+            // ── Tab Context Menu ────────────────────────────────
+            Menu {
+                id: tabContextMenu
+                property int index: -1
+
+                MenuItem {
+                    text: "Rename"
+                    onTriggered: {
+                        if (tabContextMenu.index >= 0) {
+                            var delegate = tabRepeater.itemAt(tabContextMenu.index)
+                            if (delegate) delegate.renaming = true
+                        }
+                    }
+                }
+                MenuItem {
+                    text: "Open..."
+                    onTriggered: {
+                        if (tabContextMenu.index >= 0) {
+                            tabContextMenuIndex = tabContextMenu.index
+                            openFileDialog.open()
+                        }
+                    }
+                }
+                MenuItem {
+                    text: "Export..."
+                    onTriggered: {
+                        if (tabContextMenu.index >= 0) {
+                            exportTabIndex = tabContextMenu.index
+                            saveAsDialog.open()
+                        }
+                    }
+                }
+                MenuItem {
+                    text: "Close"
+                    enabled: tabModel.count > 1
+                    onTriggered: {
+                        if (tabContextMenu.index >= 0 && tabModel.count > 1)
+                            tabModel.removeTab(tabContextMenu.index)
+                    }
+                }
+            }
         }
     }
+
+    // ── Tab index trackers for context menu ─────────────────────
+    property int tabContextMenuIndex: -1
+    property int exportTabIndex: -1
 
     // ── Add Node Popup (Shift+A) ──────────────────────────────
     AddNodePopup {
@@ -400,11 +511,21 @@ Item {
         title: "Open Graph"
         nameFilters: ["Node Graph Files (*.json)", "All Files (*)"]
         onAccepted: {
-            if (effectiveGraphModel) {
+            var targetIdx = tabContextMenuIndex >= 0 ? tabContextMenuIndex : tabModel.activeIndex
+            var tab = tabModel.get(targetIdx)
+            if (tab && tab.graphModel) {
                 var file = openFileDialog.selectedFile.toString()
                 file = file.replace(/^(file:\/{2})/, "")
-                effectiveGraphModel.qmlLoadFromFile(file)
+                tab.graphModel.qmlLoadFromFile(file)
+                // Set file path and rename tab to filename
+                tab.filePath = file
+                var parts = file.split("/")
+                var fname = parts[parts.length - 1]
+                if (fname.indexOf(".") > 0) fname = fname.substring(0, fname.lastIndexOf("."))
+                tabModel.renameTab(targetIdx, fname)
+                if (targetIdx === tabModel.activeIndex) canvasItem.gridCanvas.requestPaint()
             }
+            tabContextMenuIndex = -1
         }
     }
 
@@ -415,11 +536,19 @@ Item {
         fileMode: FileDialog.SaveFile
         defaultSuffix: "json"
         onAccepted: {
-            if (effectiveGraphModel) {
+            var targetIdx = exportTabIndex >= 0 ? exportTabIndex : tabModel.activeIndex
+            var tab = tabModel.get(targetIdx)
+            if (tab && tab.graphModel) {
                 var file = saveAsDialog.selectedFile.toString()
                 file = file.replace(/^(file:\/{2})/, "")
-                effectiveGraphModel.qmlSaveToFile(file)
+                tab.graphModel.qmlSaveToFile(file)
+                tab.filePath = file
+                var parts = file.split("/")
+                var fname = parts[parts.length - 1]
+                if (fname.indexOf(".") > 0) fname = fname.substring(0, fname.lastIndexOf("."))
+                tabModel.renameTab(targetIdx, fname)
             }
+            exportTabIndex = -1
         }
     }
 
@@ -430,21 +559,47 @@ Item {
         property int activeIndex: 0
 
         function addTab(name) {
-            append({ name: name, active: count === 0 })
+            name = root.uniqueTabName(name)
+            var g = graphModelComp.createObject(root)
+            if (root._nodeRegistry) g.qmlCopyRegistryFrom(root._nodeRegistry)
+            var u = undoManagerComp.createObject(root, {graphModel: g})
+            var e = engineComp.createObject(root, {graphModel: g})
+            append({
+                name: name,
+                filePath: "",
+                active: count === 0,
+                graphModel: g,
+                undoManager: u,
+                engine: e
+            })
             if (count === 1) setActive(0)
         }
 
         function setActive(index) {
-            for (var i = 0; i < count; i++) {
+            if (index < 0 || index >= count) return
+            for (var i = 0; i < count; i++)
                 setProperty(i, "active", i === index)
-            }
             activeIndex = index
+            root.activeTab = get(index)
+            if (canvasItem && canvasItem.gridCanvas)
+                canvasItem.gridCanvas.requestPaint()
+            autoBtn.checked = root.activeTab.engine.autoCompute
         }
 
         function removeTab(index) {
+            if (count <= 1) return
+            var item = get(index)
+            if (item.graphModel) item.graphModel.destroy()
+            if (item.undoManager) item.undoManager.destroy()
+            if (item.engine) item.engine.destroy()
             ListModel.prototype.remove.call(this, index, 1)
             if (activeIndex >= count) activeIndex = count - 1
             if (count > 0) setActive(activeIndex)
+        }
+
+        function renameTab(index, newName) {
+            newName = root.uniqueTabName(newName)
+            setProperty(index, "name", newName)
         }
 
         Component.onCompleted: addTab("Canvas 1")
@@ -501,8 +656,10 @@ Item {
     Shortcut {
         sequence: "Ctrl+N"
         onActivated: {
-            effectiveGraphModel.clear()
-            if (effectiveUndoManager) effectiveUndoManager.clear()
+            if (activeTab) {
+                activeTab.graphModel.clear()
+                activeTab.undoManager.clear()
+            }
         }
     }
 
@@ -522,6 +679,22 @@ Item {
     }
 
     Shortcut {
+        sequence: "Ctrl+W"
+        onActivated: {
+            if (tabModel.count > 1)
+                tabModel.removeTab(tabModel.activeIndex)
+        }
+    }
+
+    Shortcut {
+        sequence: "Ctrl+Tab"
+        onActivated: {
+            var next = (tabModel.activeIndex + 1) % tabModel.count
+            tabModel.setActive(next)
+        }
+    }
+
+    Shortcut {
         sequence: "Shift+V"
         onActivated: {
             if (root.selectedNodeId)
@@ -535,18 +708,58 @@ Item {
     }
 
     // ── Helper Functions ──────────────────────────────────────
-    function computeGraph() {
-        if (!effectiveGraphModel) return
-        // Data flow propagates automatically via DataFlowEngine.
-        // This method is kept as a trigger for future manual evaluation.
+    function uniqueTabName(base) {
+        var existing = []
+        for (var i = 0; i < tabModel.count; i++)
+            existing.push(tabModel.get(i).name)
+        if (existing.indexOf(base) < 0) return base
+        var idx = 1
+        while (existing.indexOf(base + "-" + idx) >= 0) idx++
+        return base + "-" + idx
     }
 
     function saveCurrentGraph() {
-        if (!effectiveGraphModel) return
-        effectiveGraphModel.qmlSaveToFile("graph_" + Date.now() + ".json")
+        if (!activeTab) return
+        var tab = tabModel.get(tabModel.activeIndex)
+        if (!tab.filePath) {
+            exportTabIndex = tabModel.activeIndex
+            saveAsDialog.open()
+            return
+        }
+        tab.graphModel.qmlSaveToFile(tab.filePath)
+        var parts = tab.filePath.split("/")
+        var fname = parts[parts.length - 1]
+        if (fname.indexOf(".") > 0) fname = fname.substring(0, fname.lastIndexOf("."))
+        tabModel.renameTab(tabModel.activeIndex, fname)
+    }
+
+    function saveAllGraphs() {
+        for (var i = 0; i < tabModel.count; i++) {
+            var tab = tabModel.get(i)
+            if (!tab.filePath) {
+                exportTabIndex = i
+                saveAsDialog.open()
+                return
+            }
+            tab.graphModel.qmlSaveToFile(tab.filePath)
+            var parts = tab.filePath.split("/")
+            var fname = parts[parts.length - 1]
+            if (fname.indexOf(".") > 0) fname = fname.substring(0, fname.lastIndexOf("."))
+            tabModel.renameTab(i, fname)
+        }
     }
 
     // Expose internal components
     function openAddNodePopup() { addNodePopup.open() }
     function fitToView() { canvasItem.fitToView() }
+
+    // ── Cleanup on destroy ────────────────────────────────────
+    Component.onDestruction: {
+        for (var i = 0; i < tabModel.count; i++) {
+            var item = tabModel.get(i)
+            if (item.graphModel) item.graphModel.destroy()
+            if (item.undoManager) item.undoManager.destroy()
+            if (item.engine) item.engine.destroy()
+        }
+    }
 }

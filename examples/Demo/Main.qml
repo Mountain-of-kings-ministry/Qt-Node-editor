@@ -11,7 +11,5 @@ Window {
 
     NodeEditorWorkspace {
         anchors.fill: parent
-        graphModel: _graphModel
-        undoManager: _undoManager
     }
 }

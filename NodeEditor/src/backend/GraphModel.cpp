@@ -613,6 +613,13 @@ void GraphModel::clear()
     }
 }
 
+void GraphModel::qmlCopyRegistryFrom(GraphModel *source)
+{
+    if (!source) return;
+    m_nodeTypes = source->m_nodeTypes;
+    m_categories = source->m_categories;
+}
+
 // ── ID conversion ─────────────────────────────────────────
 
 QString GraphModel::uuidToStr(const QUuid &id)

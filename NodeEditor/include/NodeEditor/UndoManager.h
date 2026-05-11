@@ -15,9 +15,14 @@ class UndoManager : public QObject {
     Q_OBJECT
     Q_PROPERTY(bool canUndo READ canUndo NOTIFY canUndoChanged)
     Q_PROPERTY(bool canRedo READ canRedo NOTIFY canRedoChanged)
+    Q_PROPERTY(NodeEditor::GraphModel *graphModel READ graphModel WRITE setGraphModel NOTIFY graphModelChanged)
 public:
+    explicit UndoManager(QObject *parent = nullptr);
     explicit UndoManager(GraphModel *model, QObject *parent = nullptr);
     ~UndoManager() override;
+
+    GraphModel *graphModel() const;
+    void setGraphModel(GraphModel *model);
 
     Q_INVOKABLE void undo();
     Q_INVOKABLE void redo();
@@ -38,10 +43,13 @@ public:
 signals:
     void canUndoChanged();
     void canRedoChanged();
+    void graphModelChanged();
 
 private:
-    GraphModel *m_model;
-    QUndoStack *m_stack;
+    void ensureStack();
+
+    GraphModel *m_model = nullptr;
+    QUndoStack *m_stack = nullptr;
 };
 
 } // namespace NodeEditor
