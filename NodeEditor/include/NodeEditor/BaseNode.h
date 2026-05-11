@@ -40,4 +40,20 @@ private:
     static QHash<QString, Factory> s_registry;
 };
 
+// Helper template to register a node class with both factory and metadata
+template<typename T>
+inline void registerNodeType(GraphModel *model, const QString &categoryId)
+{
+    T tmp;
+    BaseNode::registerType(tmp.nodeType(), []() { return new T(); });
+    NodeTypeInfo info;
+    for (const auto &p : tmp.inputSpec()) info.inputs[p.name] = p;
+    for (const auto &p : tmp.outputSpec()) info.outputs[p.name] = p;
+    info.displayColor = tmp.displayColor();
+    info.categoryId = categoryId;
+    info.subCategory = tmp.nodeSubCategory();
+    info.nodeName = tmp.nodeName();
+    model->registerNodeType(tmp.nodeType(), info);
+}
+
 } // namespace NodeEditor

@@ -170,18 +170,14 @@ public:
 inline void registerSystemNodeTypes(GraphModel *model)
 {
     if (!model) return;
-
-    // CanvasNode
-    BaseNode::registerType("CanvasNode", []() { return new CanvasNode(); });
-
-    NodeTypeInfo canvasNodeInfo;
-    canvasNodeInfo.inputs["filePath"] = PortInfo{PortType::String, "filePath", QVariant("")};
-    canvasNodeInfo.outputs["result"] = PortInfo{PortType::Generic, "result", QVariant()};
-    canvasNodeInfo.displayColor = "#00CEC9";
-    canvasNodeInfo.categoryId = "SubGraph";
-    canvasNodeInfo.subCategory = "Container";
-    canvasNodeInfo.nodeName = "Canvas Node";
-    model->registerNodeType("CanvasNode", canvasNodeInfo);
+    model->registerCategory({"System", "System", QColor("#636E72")});
+    model->registerCategory({"SubGraph", "SubGraph", QColor("#6C5CE7")});
+    registerNodeType<CurrentTimeNode>(model, "System");
+    registerNodeType<EnvironmentVariableNode>(model, "System");
+    registerNodeType<OSInfoNode>(model, "System");
+    registerNodeType<ClipboardNode>(model, "System");
+    registerNodeType<ProcessExecuteNode>(model, "System");
+    registerNodeType<CanvasNode>(model, "SubGraph");
 }
 
 } // namespace NodeEditor

@@ -1,0 +1,566 @@
+# Complete List of Useful Display Nodes for a Qt/C++ Node Editor
+
+Organized by category so the editor feels consistent and complete.
+
+---
+
+# Basic Value Displays
+
+## 1. Number Display ✅
+
+Shows:
+
+* int
+* float
+* double
+
+Examples:
+
+```text
+42
+3.1415
+0.98
+```
+
+---
+
+## 2. Text Display ✅
+
+Shows:
+
+* strings
+* logs
+* debug output
+* JSON
+
+---
+
+## 3. Boolean Indicator ✅
+
+Visual ON/OFF state.
+
+Examples:
+
+* LED indicator
+* colored circle
+* checkbox
+
+---
+
+## 4. Vector Display ✅
+
+Shows:
+
+```text
+X: 1.2
+Y: 5.4
+Z: 8.1
+```
+
+Useful for:
+
+* 2D/3D math
+* physics
+* transforms
+
+---
+
+# Image & Graphics Displays
+
+## 5. Image Preview ✅
+
+Displays:
+
+* QImage
+* textures
+* OpenCV frames
+
+---
+
+## 6. Video Preview ✅
+
+Displays:
+
+* webcam
+* video streams
+* rendered animation
+
+---
+
+## 7. Texture Preview ❌ (needs OpenGL)
+
+For:
+
+* GPU textures
+* shaders
+* materials
+
+---
+
+## 8. Thumbnail Grid ❌
+
+Shows multiple images/assets.
+
+Useful for:
+
+* datasets
+* texture atlases
+* galleries
+
+---
+
+## 9. Sprite Preview ❌ (needs Qt3D)
+
+2D game sprites.
+
+---
+
+## 10. Framebuffer Preview ❌ (needs OpenGL)
+
+Displays rendering pipeline outputs.
+
+---
+
+# Signal / Audio Displays
+
+## 11. Waveform Viewer ❌ (needs realtime audio)
+
+Shows:
+
+* sine waves
+* audio samples
+* signal data
+
+Equation:
+
+y(t)=A\sin(2\pi f t+\phi)
+
+---
+
+## 12. FFT Spectrum ❌ (needs FFT library)
+
+Frequency-domain visualization.
+
+---
+
+## 13. Spectrogram ❌ (needs FFT library)
+
+Time-frequency heatmap.
+
+Useful for:
+
+* audio analysis
+* DSP
+
+---
+
+## 14. Oscilloscope ❌ (needs realtime audio)
+
+Realtime waveform monitor.
+
+---
+
+## 15. VU Meter ❌ (needs audio)
+
+Audio loudness meter.
+
+---
+
+## 16. Stereo Balance Meter ❌ (needs audio)
+
+Left/right channel visualization.
+
+---
+
+# Graph & Plot Displays
+
+## 17. Line Plot ✅
+
+Standard graph display.
+
+---
+
+## 18. Scatter Plot ✅
+
+Displays point clouds/data samples.
+
+---
+
+## 19. Bar Chart ✅
+
+Useful for:
+
+* histograms
+* analytics
+
+---
+
+## 20. Pie Chart ✅
+
+Statistics visualization.
+
+---
+
+## 21. Histogram ✅
+
+Distribution visualization.
+
+---
+
+## 22. Heatmap ✅
+
+2D matrix visualization.
+
+Useful for:
+
+* AI tensors
+* simulation data
+
+---
+
+## 23. Timeline Graph ❌ (needs animation framework)
+
+Time-based animation/events.
+
+---
+
+## 24. Multi-Channel Plot ❌ (complex, not implemented)
+
+Displays several graphs together.
+
+---
+
+# 3D Displays
+
+## 25. 3D Model Preview ❌ (needs Qt3D)
+
+Shows:
+
+* meshes
+* OBJ/GLTF models
+
+---
+
+## 26. Point Cloud Viewer ❌ (needs Qt3D)
+
+For:
+
+* LiDAR
+* scans
+* spatial data
+
+---
+
+## 27. Volume Renderer ❌ (needs OpenGL)
+
+Medical/scientific rendering.
+
+---
+
+## 28. Terrain Preview ❌ (needs OpenGL)
+
+Heightmap visualization.
+
+---
+
+## 29. Camera Preview ❌ (needs Qt Multimedia)
+
+3D viewport camera output.
+
+---
+
+# Debugging Displays
+
+## 30. Console Output ✅ (`output/debug/print`, `output/debug/logger`)
+
+Logs/debug stream.
+
+---
+
+## 31. Data Inspector ✅ (`output/debug/graphInspector`, `output/debug/watchValue`)
+
+Shows structured object fields.
+
+---
+
+## 32. Memory Viewer ✅
+
+Binary/hex visualization.
+
+---
+
+## 33. Node Profiler ✅ (`output/debug/performance`)
+
+Performance timings.
+
+---
+
+## 34. FPS Counter ✅
+
+Realtime render performance.
+
+---
+
+## 35. Packet Viewer ❌ (needs network)
+
+Network/debug packet analysis.
+
+---
+
+# Math & Scientific Displays
+
+## 36. Matrix Display ✅
+
+Displays matrices/tensors.
+
+---
+
+## 37. Complex Plane Viewer ❌ (needs complex math)
+
+Complex number visualization.
+
+---
+
+## 38. Vector Field Display ❌ (needs OpenGL)
+
+Arrow-based flow visualization.
+
+---
+
+## 39. Equation Renderer ❌ (needs LaTeX)
+
+Displays mathematical formulas.
+
+Example:
+
+genui{"math_block_widget_always_prefetch_v2":{"content":"f(x)=ax^2+bx+c"}}
+
+---
+
+## 40. Function Graph ❌ (needs plotting library)
+
+Plots equations/functions directly.
+
+Example:
+
+genui{"math_block_widget_always_prefetch_v2":{"content":"y=\sin(x)"}}
+
+---
+
+# AI / ML Displays
+
+## 41. Tensor Viewer ❌ (needs ML framework)
+
+Displays tensor dimensions/values.
+
+---
+
+## 42. Neural Network Graph ❌ (needs ML framework)
+
+Visualizes AI architecture.
+
+---
+
+## 43. Feature Map Viewer ❌ (needs ML framework)
+
+CNN activation previews.
+
+---
+
+## 44. Training Metrics Plot ❌ (needs ML framework)
+
+Loss/accuracy graphs.
+
+---
+
+# Game Development Displays
+
+## 45. Animation Preview ❌ (needs Qt3D)
+
+Shows skeletal/sprite animations.
+
+---
+
+## 46. Tilemap Preview ❌ (needs tile engine)
+
+2D level visualization.
+
+---
+
+## 47. Material Preview ❌ (needs OpenGL)
+
+PBR/material rendering.
+
+---
+
+## 48. Particle System Preview ❌ (needs OpenGL)
+
+Realtime particles.
+
+---
+
+## 49. Shader Output ❌ (needs OpenGL)
+
+GLSL/HLSL render output.
+
+---
+
+# UI / Utility Displays
+
+## 50. Table View ❌ (needs table widget)
+
+Spreadsheet-style data.
+
+---
+
+## 51. Tree View ❌ (needs tree widget)
+
+Hierarchy visualization.
+
+---
+
+## 52. List View ❌ (needs list widget)
+
+Simple collections.
+
+---
+
+## 53. Progress Bar ✅
+
+Task/progress visualization.
+
+---
+
+## 54. Gauge / Dial ✅
+
+Speedometer-like display.
+
+---
+
+## 55. Compass / Direction ✅
+
+Angle/orientation visualization.
+
+---
+
+# Recommended "Core Pack"
+
+If you want a sensible first release, start with:
+
+| Priority  | Node            |
+| --------- | --------------- |
+| Essential | Number Display  |
+| Essential | Text Display    |
+| Essential | Image Preview   |
+| Essential | Plot Graph      |
+| Essential | Waveform Viewer |
+| Essential | Video Preview   |
+| Essential | Console Output  |
+| Essential | Table View      |
+| Advanced  | FFT Spectrum    |
+| Advanced  | Heatmap         |
+| Advanced  | 3D Preview      |
+| Advanced  | Shader Output   |
+
+That already feels like a real professional node editor package.
+
+A concise professional description you can use for your node/package:
+
+---
+
+## LED Matrix Display Node ✅ (`output/display/ledMatrix`)
+
+A realtime LED matrix display node designed for rendering static text and numeric values in a classic pixel-matrix style. The node accurately displays incoming data using configurable matrix dimensions, allowing the display size to be adjusted dynamically through node properties.
+
+The display updates continuously at millisecond intervals, ensuring the rendered output always reflects the latest incoming value without requiring scrolling or animation. Ideal for dashboards, embedded simulations, retro displays, debugging interfaces, signal visualization, and realtime monitoring systems.
+
+### Features
+
+* Realtime millisecond updates
+* Static non-scrolling display
+* Accurate text and numeric rendering
+* Dynamic matrix width and height
+* Adjustable LED pixel size and spacing
+* Supports custom foreground/background colors
+* Lightweight and efficient rendering
+* Designed for Qt/C++ node-based systems
+
+### Supported Inputs
+
+* Integer values
+* Floating-point values
+* Strings/text
+* Boolean states
+* Formatted data streams
+
+### Common Use Cases
+
+* Digital counters
+* Status panels
+* Telemetry displays
+* Industrial dashboards
+* Retro LED simulations
+* Embedded UI visualization
+* Debug and monitoring tools
+
+### Properties
+
+* Matrix Width
+* Matrix Height
+* LED Size
+* Pixel Spacing
+* Text Color
+* Background Color
+* Refresh Interval (ms)
+* Font/Character Set
+* Brightness Intensity
+
+### Behavior
+
+The node renders incoming values as a static LED matrix representation. Whenever the input changes, the display refreshes immediately while maintaining stable non-scrolling output behavior.
+
+
+---
+# Not Implemented (External Dependencies Required)
+
+These nodes require third-party libraries or platform-specific APIs and are not implemented yet:
+
+| # | Node | Required Dependency |
+|---|------|-------------------|
+| 7 | Texture Preview | OpenGL |
+| 8 | Thumbnail Grid | Qt Widgets |
+| 9 | Sprite Preview | Qt3D |
+| 10 | Framebuffer Preview | OpenGL |
+| 11 | Waveform Viewer | Real-time audio |
+| 12 | FFT Spectrum | FFT library (e.g. KISS FFT) |
+| 13 | Spectrogram | FFT library |
+| 14 | Oscilloscope | Real-time audio |
+| 15 | VU Meter | Audio processing |
+| 16 | Stereo Balance Meter | Audio processing |
+| 23 | Timeline Graph | Animation framework |
+| 24 | Multi-Channel Plot | Complex rendering |
+| 25 | 3D Model Preview | Qt3D / OpenGL |
+| 26 | Point Cloud Viewer | Qt3D / OpenGL |
+| 27 | Volume Renderer | OpenGL |
+| 28 | Terrain Preview | OpenGL |
+| 29 | Camera Preview | Qt Multimedia |
+| 35 | Packet Viewer | Network library |
+| 37 | Complex Plane Viewer | Complex math library |
+| 38 | Vector Field Display | OpenGL |
+| 39 | Equation Renderer | LaTeX / MathJax |
+| 40 | Function Graph | Plotting library |
+| 41 | Tensor Viewer | ML framework |
+| 42 | Neural Network Graph | ML framework |
+| 43 | Feature Map Viewer | ML framework |
+| 44 | Training Metrics Plot | ML framework |
+| 45 | Animation Preview | Qt3D |
+| 46 | Tilemap Preview | Tile engine |
+| 47 | Material Preview | OpenGL |
+| 48 | Particle System Preview | OpenGL |
+| 49 | Shader Output | OpenGL |
+| 50 | Table View | Qt Widgets |
+| 51 | Tree View | Qt Widgets |
+| 52 | List View | Qt Widgets |
+
+---
+**Legend**: ✅ = Implemented in `OutputNodes.h` | ❌ = Not yet implemented

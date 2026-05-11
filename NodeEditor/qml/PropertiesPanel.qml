@@ -12,11 +12,16 @@ Item {
     property var nodeInfo: ({})
     readonly property var _emptyList: []
 
+    property bool _isDisplayNode: false
+
     onNodeIdChanged: {
         if (nodeId && graphModel)
             nodeInfo = graphModel.qmlNodeInfo(nodeId)
         else
             nodeInfo = ({})
+        _isDisplayNode = nodeInfo && nodeInfo.type && (
+            nodeInfo.type.indexOf("output/display/") === 0 ||
+            nodeInfo.type.indexOf("output/visual/") === 0)
     }
 
     Connections {
@@ -150,6 +155,7 @@ Item {
                 // Output port data
                 Repeater {
                     model: root.nodeInfo.outputPorts || root._emptyList
+                    visible: !root._isDisplayNode
 
                     Item {
                         width: detailColumn.width

@@ -1,4 +1,46 @@
-this demo is for running a script on the node, just json script with an interpreter as the output node
-like a basic math operation writen in json.
+# JSON Script Interpreter Example
 
-write the node connection json so i wont have to wire it my self i just import it
+Executes stack-based scripts written in JSON and displays the result using the `NumberDisplayNode`.
+
+## Nodes Used
+
+- `script/jsonInterpreter` — executes JSON script commands on a stack machine
+- `output/display/number` — shows the computed result inline
+
+### Supported Script Commands
+
+| Command | Args | Description |
+|---------|------|-------------|
+| `push` | `[number]` | Push value onto stack |
+| `add` | `[]` | Pop two values, push sum |
+| `sub` | `[]` | Pop two values, push difference |
+| `mul` | `[]` | Pop two values, push product |
+| `div` | `[]` | Pop two values, push quotient |
+| `dup` | `[]` | Duplicate top of stack |
+| `swap` | `[]` | Swap top two values |
+| `drop` | `[]` | Discard top of stack |
+| `print` | `[]` | No-op (result visible in display) |
+
+### Example Script (computes (5 + 3) * 2 = 16)
+
+```json
+[{"cmd":"push","args":[5]},{"cmd":"push","args":[3]},{"cmd":"add","args":[]},{"cmd":"push","args":[2]},{"cmd":"mul","args":[]}]
+```
+
+## Graph
+
+1. Add a `JSONScriptInterpreter` node (Scripting → JSON)
+2. Set its `script` input to a valid JSON command array
+3. Add a `NumberDisplay` node (Output → Value)
+4. Connect `JSONScriptInterpreter.result` → `NumberDisplay.value`
+
+## Pre-made Graph
+
+Import `script-demo.json` to load a working graph that computes `(5 + 3) * 2 = 16`.
+
+## Build & Run
+
+```bash
+cmake --build --preset debug
+./build/debug/examples/script-demo/ScriptDemoApp
+```

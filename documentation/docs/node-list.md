@@ -1,8 +1,8 @@
 # Built-in Nodes
 
-The NodeEditor includes **136+ built-in nodes** across 15 categories. Nodes are registered via `DefaultNodeRegistry`.
+The NodeEditor includes **153+ built-in nodes** across 15 categories. Nodes are registered via `registerDefaultNodeTypes()`.
 
-## Math (41 nodes)
+## Math (37 nodes)
 
 ### Basic Arithmetic
 `add`, `subtract`, `multiply`, `divide`, `modulo`, `power`, `sqrt`, `abs`, `negate`, `clamp`, `lerp`, `remap`
@@ -70,16 +70,33 @@ The NodeEditor includes **136+ built-in nodes** across 15 categories. Nodes are 
 ### File I/O
 `fileRead`, `fileWrite`, `fileExists`, `fileDelete`, `pathJoin`
 
-## Output (11 nodes)
+## Output (28 nodes)
 
 ### Visual
-`display`, `plot`, `chart`, `gauge`, `progressBar`
+`imageOutput`, `videoOutput`, `viewportOutput`, `pixelBufferOutput`
+
+### Value (inline preview)
+`numberDisplay`, `textDisplay`, `booleanIndicator`, `vectorDisplay`
+
+### Chart (inline preview)
+`linePlot`, `scatterPlot`, `barChart`, `pieChart`, `histogram`, `heatmap`
+
+### Matrix (inline preview)
+`matrixDisplay`, `memoryViewer`
+
+### Utility (inline preview)
+`progressBar`, `gauge`, `compass`, `fpsMeter`
+
+### LED Matrix (inline preview)
+`ledMatrixDisplay`
 
 ### Data
-`logConsole`, `logFile`, `notify`, `exportJSON`, `debugBreak`
+`fileWriter`, `jsonExport`
 
 ### Debug
-`print`, `inspect`, `assert`, `watch`
+`print`, `logger`, `graphInspector`, `watchValue`, `performanceMonitor`
+
+**Note**: Display nodes with "inline preview" render their output visually inside the node body on the canvas, rather than showing raw values in the Properties panel.
 
 ## System (5 nodes)
 `currentTime`, `envVar`, `osInfo`, `clipboard`, `processExecute`

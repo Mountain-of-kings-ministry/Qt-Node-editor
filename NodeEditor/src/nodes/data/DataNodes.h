@@ -225,4 +225,19 @@ public:
     }
 };
 
+inline void registerDataNodeTypes(GraphModel *model)
+{
+    if (!model) return;
+    model->registerCategory({"Data", "Data", QColor("#6C5CE7")});
+    registerNodeType<ParseJSONNode>(model, "Data");
+    registerNodeType<JSONGetNode>(model, "Data");
+    registerNodeType<JSONSetNode>(model, "Data");
+    registerNodeType<JSONArrayNode>(model, "Data");
+    registerNodeType<SerializeObjectNode>(model, "Data");
+    registerNodeType<DeserializeObjectNode>(model, "Data");
+    registerNodeType<ReadFileNode>(model, "Data");
+    registerNodeType<WriteFileNode>(model, "Data");
+    registerNodeType<CSVParseNode>(model, "Data");
+}
+
 } // namespace NodeEditor

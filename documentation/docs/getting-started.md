@@ -48,3 +48,10 @@ Edges carry data from output ports to input ports. Right-click an edge to delete
 
 ### Data Flow
 The engine automatically propagates data changes through the graph. When you edit a node's input, all downstream nodes recompute.
+
+### Display Nodes (Inline Preview)
+Output display nodes (`output/display/*`) render their computed output visually inside the node body:
+- **Text-based** (Number, Text, Vector, Matrix, Memory, FPS): formatted text shown in a monospace area
+- **Image-based** (LED Matrix, Line Plot, Bar Chart, Pie Chart, Histogram, Heatmap, Progress, Gauge, Compass, Boolean): rendered QImage shown inside the node
+
+Display nodes do not show raw output values in the Properties panel — the inline preview replaces that.

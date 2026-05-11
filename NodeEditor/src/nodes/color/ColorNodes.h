@@ -192,9 +192,9 @@ public:
     QVariantMap compute(const QVariantMap &inputs) override {
         QColor c = inputs.value("color").value<QColor>();
         double f = std::clamp(inputs.value("factor").toDouble(), 0.0, 2.0);
-        double h, s, v, a;
+        float h, s, v, a;
         c.getHsvF(&h, &s, &v, &a);
-        c.setHsvF(h, std::clamp(s * f, 0.0, 1.0), v, a);
+        c.setHsvF(h, std::clamp(s * static_cast<float>(f), 0.0f, 1.0f), v, a);
         return {{"result", c}};
     }
 };
@@ -216,9 +216,9 @@ public:
     QVariantMap compute(const QVariantMap &inputs) override {
         QColor c = inputs.value("color").value<QColor>();
         double f = std::clamp(inputs.value("factor").toDouble(), 0.0, 2.0);
-        double h, s, v, a;
+        float h, s, v, a;
         c.getHsvF(&h, &s, &v, &a);
-        c.setHsvF(h, s, std::clamp(v * f, 0.0, 1.0), a);
+        c.setHsvF(h, s, std::clamp(v * static_cast<float>(f), 0.0f, 1.0f), a);
         return {{"result", c}};
     }
 };
@@ -239,8 +239,8 @@ public:
     }
     QVariantMap compute(const QVariantMap &inputs) override {
         QColor c = inputs.value("color").value<QColor>();
-        double a = std::clamp(inputs.value("amount").toDouble(), 0.0, 2.0);
-        auto contrast = [a](double v) { return std::clamp((v - 0.5) * a + 0.5, 0.0, 1.0); };
+        double amt = std::clamp(inputs.value("amount").toDouble(), 0.0, 2.0);
+        auto contrast = [amt](double v) { return std::clamp((v - 0.5) * amt + 0.5, 0.0, 1.0); };
         c.setRedF(contrast(c.redF()));
         c.setGreenF(contrast(c.greenF()));
         c.setBlueF(contrast(c.blueF()));
@@ -268,9 +268,9 @@ public:
     }
     QVariantMap compute(const QVariantMap &inputs) override {
         QColor c = inputs.value("color").value<QColor>();
-        double h, s, v, a;
+        float h, s, v, a;
         c.getHsvF(&h, &s, &v, &a);
-        return {{"h", h}, {"s", s}, {"v", v}};
+        return {{"h", static_cast<double>(h)}, {"s", static_cast<double>(s)}, {"v", static_cast<double>(v)}};
     }
 };
 
@@ -386,19 +386,41 @@ public:
     QVariantMap compute(const QVariantMap &inputs) override {
         QColor base = inputs.value("base").value<QColor>();
         int count = std::max(1, inputs.value("count").toInt());
-        double h, s, v, a;
+        float h, s, v, a;
         base.getHsvF(&h, &s, &v, &a);
         QVariantList palette;
         for (int i = 0; i < count; ++i) {
             QColor c;
             double t = double(i) / (count - 1);
-            c.setHsvF(std::fmod(h + t * 0.3, 1.0),
-                       std::clamp(s * (1.0 - t * 0.3), 0.3, 1.0),
-                       std::clamp(v * (0.7 + t * 0.3), 0.3, 1.0));
+            c.setHsvF(std::fmod(h + static_cast<float>(t * 0.3), 1.0f),
+                       std::clamp(s * static_cast<float>(1.0 - t * 0.3), 0.3f, 1.0f),
+                       std::clamp(v * static_cast<float>(0.7 + t * 0.3), 0.3f, 1.0f));
             palette.append(QVariant::fromValue(c));
         }
         return {{"palette", palette}};
     }
 };
+
+inline void registerColorNodeTypes(GraphModel *model)
+{
+    if (!model) return;
+    model->registerCategory({"Color", "Color", QColor("#A29BFE")});
+    registerNodeType<RGBColorNode>(model, "Color");
+    registerNodeType<HSVColorNode>(model, "Color");
+    registerNodeType<HexColorNode>(model, "Color");
+    registerNodeType<ColorFromStringNode>(model, "Color");
+    registerNodeType<BlendColorsNode>(model, "Color");
+    registerNodeType<MultiplyColorNode>(model, "Color");
+    registerNodeType<InvertColorNode>(model, "Color");
+    registerNodeType<SaturationNode>(model, "Color");
+    registerNodeType<BrightnessNode>(model, "Color");
+    registerNodeType<ContrastNode>(model, "Color");
+    registerNodeType<RGBToHSVNode>(model, "Color");
+    registerNodeType<HSVToRGBNode>(model, "Color");
+    registerNodeType<RGBToHEXNode>(model, "Color");
+    registerNodeType<HEXToRGBNode>(model, "Color");
+    registerNodeType<GradientNode>(model, "Color");
+    registerNodeType<PaletteGeneratorNode>(model, "Color");
+}
 
 } // namespace NodeEditor

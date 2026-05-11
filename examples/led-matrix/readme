@@ -1,3 +1,30 @@
-this is a led matrix the output node will give a led matrix output node printing abcd in a scrolling manner
+# LED Matrix Display Example
 
-write the node connection json so i wont have to wire it my self i just import it
+Renders text on a simulated LED matrix display using the `LEDMatrixDisplayNode`.
+
+## Nodes Used
+
+- `utility/value/constant` — provides the text to display
+- `output/display/ledMatrix` — renders text as an LED matrix visualization
+
+The `LEDMatrixDisplayNode` offers configurable:
+- Matrix width and height
+- LED pixel size and spacing
+- Foreground and background colors
+
+## Graph
+
+1. Add a `Constant` node (Utility → Value), set its value to text (e.g., "HELLO LED")
+2. Add an `LEDMatrixDisplay` node (Output → LED Matrix)
+3. Connect `Constant.output` → `LEDMatrixDisplay.value`
+
+## Pre-made Graph
+
+Import `led-matrix.json` to load the wired graph instantly.
+
+## Build & Run
+
+```bash
+cmake --build --preset debug
+./build/debug/examples/led-matrix/LedMatrixApp
+```

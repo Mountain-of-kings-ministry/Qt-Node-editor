@@ -18,6 +18,17 @@ Item {
     width: 180
     height: 30 + body.height
 
+    readonly property var _displayTypes: [
+        "output/display/number", "output/display/text", "output/display/boolean",
+        "output/display/vector", "output/display/linePlot", "output/display/scatterPlot",
+        "output/display/barChart", "output/display/pieChart", "output/display/histogram",
+        "output/display/heatmap", "output/display/matrix", "output/display/memory",
+        "output/display/progress", "output/display/gauge", "output/display/compass",
+        "output/display/fps", "output/display/ledMatrix"
+    ]
+
+    property bool _isDisplayNode: false
+
     function findCanvas() {
         var p = root.parent
         while (p) {
@@ -42,6 +53,9 @@ Item {
             root.x = nodeInfo.x
             root.y = nodeInfo.y
         }
+        _isDisplayNode = nodeInfo && nodeInfo.type && (
+            nodeInfo.type.indexOf("output/display/") === 0 ||
+            nodeInfo.type.indexOf("output/visual/") === 0)
     }
 
     Component.onCompleted: syncFromModel()
@@ -163,7 +177,7 @@ Item {
         anchors.top: header.bottom
         anchors.topMargin: -6
         width: parent.width
-        height: inputColumn.height + outputColumn.height + 20
+        height: inputColumn.height + outputColumn.height + (previewArea.visible ? previewArea.height : 0) + 24
         radius: 6
         color: "#2A2A2A"
         border.color: root.isSelected() ? "#00B4FF" : "#3A3A3A"
@@ -379,6 +393,96 @@ Item {
                         portType: (nodeInfo.outputPortTypes && nodeInfo.outputPortTypes[index]) || 0
                         anchors.verticalCenter: parent.verticalCenter
                         anchors.right: parent.right
+                    }
+                }
+            }
+        }
+
+        // ── Inline Preview for display nodes ──
+        Item {
+            id: previewArea
+            anchors.top: outputColumn.bottom
+            anchors.topMargin: 4
+            anchors.left: parent.left
+            anchors.leftMargin: 4
+            anchors.right: parent.right
+            anchors.rightMargin: 4
+            visible: _isDisplayNode && graphModel
+            height: visible ? previewLoader.height : 0
+            clip: true
+
+            Loader {
+                id: previewLoader
+                width: parent.width
+                active: parent.visible
+                sourceComponent: _isDisplayNode ? previewComponent : null
+            }
+        }
+
+        Component {
+            id: previewComponent
+
+            Item {
+                width: previewArea.width
+                height: previewHeight()
+                property string displayVal: graphModel ? String(graphModel.qmlNodeData(nodeId, "display") || "") : ""
+
+                function previewHeight() {
+                    var t = nodeInfo.type
+                    if (t === "output/display/ledMatrix") return 100
+                    if (t === "output/display/gauge") return 90
+                    if (t === "output/display/compass") return 80
+                    if (t === "output/display/boolean" || t === "output/display/progress") return 30
+                    if (t === "output/display/text" || t === "output/display/memory" || t === "output/display/matrix") return 50
+                    if (t === "output/display/number" || t === "output/display/vector" || t === "output/display/fps") return 40
+                    return 90
+                }
+
+                function isImageType() {
+                    var t = nodeInfo.type
+                    return t === "output/display/ledMatrix" || t === "output/display/linePlot" ||
+                           t === "output/display/scatterPlot" || t === "output/display/barChart" ||
+                           t === "output/display/pieChart" || t === "output/display/histogram" ||
+                           t === "output/display/heatmap" || t === "output/display/progress" ||
+                           t === "output/display/gauge" || t === "output/display/compass" ||
+                           t === "output/display/boolean" || t.indexOf("output/visual/") === 0
+                }
+
+                Rectangle {
+                    anchors.fill: parent
+                    color: "#1E1E1E"
+                    radius: 4
+                    border.color: "#3A3A3A"
+                    border.width: 1
+
+                    Image {
+                        anchors.fill: parent
+                        anchors.margins: 2
+                        fillMode: Image.PreserveAspectFit
+                        source: isImageType() && displayVal.length > 0
+                            ? "data:image/png;base64," + displayVal
+                            : ""
+                        visible: isImageType() && displayVal.length > 0
+                    }
+
+                    Text {
+                        anchors.fill: parent
+                        anchors.margins: 4
+                        color: "#CCCCCC"
+                        font.pixelSize: 10
+                        font.family: "monospace"
+                        wrapMode: Text.Wrap
+                        elide: Text.ElideRight
+                        text: isImageType() ? "" : displayVal
+                        visible: !isImageType() && displayVal.length > 0
+                    }
+                }
+
+                Connections {
+                    target: graphModel
+                    function onQmlNodeDataChanged(id, key) {
+                        if (id === nodeId)
+                            displayVal = String(graphModel.qmlNodeData(nodeId, "display") || "")
                     }
                 }
             }

@@ -139,4 +139,17 @@ public:
     }
 };
 
+inline void registerLogicNodeTypes(GraphModel *model)
+{
+    if (!model) return;
+    model->registerCategory({"Logic", "Logic", QColor("#FF6B6B")});
+    registerNodeType<ANDNode>(model, "Logic");
+    registerNodeType<ORNode>(model, "Logic");
+    registerNodeType<XORNode>(model, "Logic");
+    registerNodeType<NOTNode>(model, "Logic");
+    registerNodeType<BooleanCompareNode>(model, "Logic");
+    registerNodeType<IsTrueNode>(model, "Logic");
+    registerNodeType<IsFalseNode>(model, "Logic");
+}
+
 } // namespace NodeEditor

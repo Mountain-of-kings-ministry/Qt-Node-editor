@@ -118,4 +118,16 @@ public:
     }
 };
 
+inline void registerEventNodeTypes(GraphModel *model)
+{
+    if (!model) return;
+    model->registerCategory({"Events", "Events", QColor("#FDCB6E")});
+    registerNodeType<BeginNode>(model, "Events");
+    registerNodeType<TickNode>(model, "Events");
+    registerNodeType<TimerEventNode>(model, "Events");
+    registerNodeType<InputEventNode>(model, "Events");
+    registerNodeType<SignalEventNode>(model, "Events");
+    registerNodeType<PropertyChangedNode>(model, "Events");
+}
+
 } // namespace NodeEditor

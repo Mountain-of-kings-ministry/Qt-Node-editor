@@ -3,6 +3,9 @@
 #include "NodeEditor/BaseNode.h"
 #include <QtMath>
 #include <QRandomGenerator>
+#include <QVector2D>
+#include <QVector3D>
+#include <QVector4D>
 
 namespace NodeEditor {
 
@@ -864,5 +867,52 @@ public:
         return {{"result", mn + (mx - mn) * r}};
     }
 };
+
+inline void registerMathNodeTypes(GraphModel *model)
+{
+    if (!model) return;
+    model->registerCategory({"Math", "Math", QColor("#FF9F43")});
+    registerNodeType<AddNode>(model, "Math");
+    registerNodeType<SubtractNode>(model, "Math");
+    registerNodeType<MultiplyNode>(model, "Math");
+    registerNodeType<DivideNode>(model, "Math");
+    registerNodeType<ModuloNode>(model, "Math");
+    registerNodeType<PowerNode>(model, "Math");
+    registerNodeType<SquareRootNode>(model, "Math");
+    registerNodeType<AbsoluteNode>(model, "Math");
+    registerNodeType<NegateNode>(model, "Math");
+    registerNodeType<EqualNode>(model, "Math");
+    registerNodeType<NotEqualNode>(model, "Math");
+    registerNodeType<GreaterThanNode>(model, "Math");
+    registerNodeType<LessThanNode>(model, "Math");
+    registerNodeType<ClampNode>(model, "Math");
+    registerNodeType<MinNode>(model, "Math");
+    registerNodeType<MaxNode>(model, "Math");
+    registerNodeType<LerpNode>(model, "Math");
+    registerNodeType<SmoothstepNode>(model, "Math");
+    registerNodeType<RoundNode>(model, "Math");
+    registerNodeType<FloorNode>(model, "Math");
+    registerNodeType<CeilNode>(model, "Math");
+    registerNodeType<FractNode>(model, "Math");
+    registerNodeType<SignNode>(model, "Math");
+    registerNodeType<NormalizeNode>(model, "Math");
+    registerNodeType<SinNode>(model, "Math");
+    registerNodeType<CosNode>(model, "Math");
+    registerNodeType<TanNode>(model, "Math");
+    registerNodeType<ASinNode>(model, "Math");
+    registerNodeType<ACosNode>(model, "Math");
+    registerNodeType<ATanNode>(model, "Math");
+    registerNodeType<Vec2Node>(model, "Math");
+    registerNodeType<Vec3Node>(model, "Math");
+    registerNodeType<Vec4Node>(model, "Math");
+    registerNodeType<DotProductNode>(model, "Math");
+    registerNodeType<CrossProductNode>(model, "Math");
+    registerNodeType<LengthNode>(model, "Math");
+    registerNodeType<DistanceNode>(model, "Math");
+    registerNodeType<RandomFloatNode>(model, "Math");
+    registerNodeType<RandomIntegerNode>(model, "Math");
+    registerNodeType<NoiseNode>(model, "Math");
+    registerNodeType<SeedRandomNode>(model, "Math");
+}
 
 } // namespace NodeEditor

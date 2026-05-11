@@ -2,6 +2,8 @@
 
 #include "NodeEditor/BaseNode.h"
 #include <QtMath>
+#include <QRandomGenerator>
+#include <QImage>
 
 namespace NodeEditor {
 
@@ -128,5 +130,16 @@ public:
         return {{"frame", QVariant::fromValue(QImage())}};
     }
 };
+
+inline void registerGeneratorNodeTypes(GraphModel *model)
+{
+    if (!model) return;
+    model->registerCategory({"Generators", "Generators", QColor("#55EFC4")});
+    registerNodeType<SineWaveNode>(model, "Generators");
+    registerNodeType<NoiseGeneratorNode>(model, "Generators");
+    registerNodeType<GradientGeneratorNode>(model, "Generators");
+    registerNodeType<OscillatorNode>(model, "Generators");
+    registerNodeType<CameraFeedNode>(model, "Generators");
+}
 
 } // namespace NodeEditor

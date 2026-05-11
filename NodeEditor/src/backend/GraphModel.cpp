@@ -3,6 +3,7 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QFile>
+#include <QSet>
 #include <algorithm>
 
 namespace NodeEditor {
@@ -253,7 +254,21 @@ const NodeTypeInfo *GraphModel::nodeTypeInfo(const QString &type) const
 
 QStringList GraphModel::qmlAllNodeTypes() const
 {
-    return m_nodeTypes.keys();
+    QStringList result;
+    QSet<QString> seen;
+    for (const auto &cat : m_categories) {
+        for (auto it = m_nodeTypes.begin(); it != m_nodeTypes.end(); ++it) {
+            if (it.value().categoryId == cat.id) {
+                result.append(it.key());
+                seen.insert(it.key());
+            }
+        }
+    }
+    for (auto it = m_nodeTypes.begin(); it != m_nodeTypes.end(); ++it) {
+        if (!seen.contains(it.key()))
+            result.append(it.key());
+    }
+    return result;
 }
 
 // ── Category registry ────────────────────────────────────

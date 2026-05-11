@@ -1,9 +1,31 @@
-this demo is for node based electric circuits simulation
+# Electric Circuit Simulator Example
 
-the nodes will include resistors, capacitors, and other electrical components
+Simulates a basic DC circuit: battery → resistor → LED, with inline displays showing voltage and brightness.
 
-but what i need majorly is just a blinking led simulation
+## Nodes Used
 
-their will be battery and it value, and the simulation will run until the battery dies
+- `electric/battery` — provides configurable voltage (default 9V)
+- `electric/resistor` — has configurable resistance; computes current from voltage drop
+- `electric/led` — lights up when forward voltage is exceeded; outputs brightness 0.0–1.0
+- `output/display/number` — shows the circuit voltage inline
+- `output/display/progress` — shows the LED brightness as a progress bar
 
-write the node connection json so i wont have to wire it my self i just import it
+## Graph
+
+1. Add Battery, Resistor, and LED nodes (Circuit category)
+2. Add a NumberDisplay and ProgressBar (Output → Value / Output → Utility)
+3. Connect `Battery.voltage` → `Resistor.inVoltage`
+4. Connect `Resistor.outVoltage` → `LED.inVoltage`
+5. Connect `Resistor.outVoltage` → `NumberDisplay.value`
+6. Connect `LED.brightness` → `ProgressBar.value`
+
+## Pre-made Graph
+
+Import `electric-demo.json` to load the wired graph instantly.
+
+## Build & Run
+
+```bash
+cmake --build --preset debug
+./build/debug/examples/electric-demo/ElectricDemoApp
+```

@@ -44,9 +44,24 @@ Abstract base for custom nodes.
 | `nodeType()` | Unique type path |
 | `nodeCategory()` | Category ID |
 | `nodeSubCategory()` | Subcategory path |
+| `displayColor()` | Hex color for node header (e.g. `"#4A9EFF"`) |
 | `inputSpec()` | List of input PortInfo |
 | `outputSpec()` | List of output PortInfo |
-| `compute(inputs, outputs)` | Execute node logic |
+| `compute(inputs)` | Execute node logic; returns QVariantMap of outputs |
+| `setDirty(bool)` | Mark node for re-evaluation |
+
+### registerNodeType&lt;T&gt;(model, categoryId)
+Template helper in `BaseNode.h`. Registers a node class T by reading its specs at runtime:
+
+```cpp
+registerNodeType<MyNode>(model, "MyCategory");
+```
+
+Equivalent to:
+```cpp
+MyNode tmp;
+model->registerNodeType(tmp.nodeType(), {/* auto-filled from tmp */});
+```
 
 ### DataFlowEngine
 `include/NodeEditor/DataFlowEngine.h`
@@ -69,6 +84,9 @@ Triggered by `nodeDataChanged`, `nodeAdded`, and `edgeAdded` signals.
 | `qmlEdgeIds()` | List all edge IDs |
 | `qmlEdgeInfo(edgeId)` | Get edge metadata as QVariantMap |
 | `qmlIsPortConnected(nodeId, port, isInput)` | Check if a port has a connection |
+| `qmlAllNodeTypes()` | List all registered node types (grouped by category order) |
+| `qmlCategories()` | List registered categories in registration order |
+| `qmlNodesInCategory(categoryId)` | List node types belonging to a category |
 | `qmlSaveToFile(path)` | Save graph to a file on disk (C++ QFile, no XMLHttpRequest) |
 | `qmlLoadFromFile(path)` | Load graph from a file on disk |
 | `clear()` | Remove all nodes and edges |
@@ -107,7 +125,7 @@ Searchable popup for adding nodes by type.
 **Properties**: `graphModel`, `undoManager`
 
 ### Node
-Visual representation of a graph node. Input TextFields become read-only when the port is connected to an output. Output values are displayed in green.
+Visual representation of a graph node. Input TextFields become read-only when the port is connected to an output. Output values are displayed in green. **Display nodes** (`output/display/*`) render their output inline inside the node body (images for charts/gauges/LED matrix, formatted text for numbers/vectors).
 
 **Properties**: `graphModel`, `undoManager`, `nodeId`, `nodeInfo`, `selected`
 

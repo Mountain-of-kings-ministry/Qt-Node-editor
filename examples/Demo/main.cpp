@@ -19,53 +19,59 @@ int main(int argc, char *argv[])
     qmlRegisterType<UndoManager>("NodeEditor", 1, 0, "UndoManager");
     qmlRegisterType<DataFlowEngine>("NodeEditor", 1, 0, "DataFlowEngine");
 
-    // Register categories
+    // Register ALL built-in nodes (Math, Color, Logic, Data, Events, Generators, Output, Qt, Utility, System, SubGraph)
     GraphModel model;
-    model.registerCategory({"Input", "Input", QColor("#4CDF8B")});
-    model.registerCategory({"Math", "Math", QColor("#FF9F43")});
-    model.registerCategory({"Output", "Output", QColor("#FF6B6B")});
-
-    // Register demo node types
-    BaseNode::registerType("Input", []() { return new InputNode(); });
-    BaseNode::registerType("Add", []() { return new AddNode(); });
-    BaseNode::registerType("Multiply", []() { return new MultiplyNode(); });
-    BaseNode::registerType("Output", []() { return new OutputNode(); });
-
-    // Register system-default node types (CanvasInput, CanvasOutput, JsonInput, CanvasNode)
     registerDefaultNodeTypes(&model);
 
-    // Register node type metadata for QML
-    NodeTypeInfo inputInfo;
-    inputInfo.inputs["input"] = PortInfo{PortType::Float, "input", QVariant(0.0)};
-    inputInfo.outputs["value"] = PortInfo{PortType::Float, "value", QVariant()};
-    inputInfo.displayColor = "#4CDF8B";
-    inputInfo.categoryId = "Input";
-    model.registerNodeType("Input", inputInfo);
+    // Register Demo-specific category and nodes
+    model.registerCategory({"Demo", "Demo", QColor("#636E72")});
 
-    NodeTypeInfo addInfo;
-    addInfo.inputs["a"] = PortInfo{PortType::Float, "a", QVariant(0.0)};
-    addInfo.inputs["b"] = PortInfo{PortType::Float, "b", QVariant(0.0)};
-    addInfo.outputs["result"] = PortInfo{PortType::Float, "result", QVariant()};
-    addInfo.displayColor = "#FF9F43";
-    addInfo.categoryId = "Math";
-    addInfo.subCategory = "Basic Operations";
-    model.registerNodeType("Add", addInfo);
+    BaseNode::registerType("demo/input", []() { return new DemoInputNode(); });
+    BaseNode::registerType("demo/add", []() { return new DemoAddNode(); });
+    BaseNode::registerType("demo/multiply", []() { return new DemoMultiplyNode(); });
+    BaseNode::registerType("demo/output", []() { return new DemoOutputNode(); });
 
-    NodeTypeInfo multiplyInfo;
-    multiplyInfo.inputs["a"] = PortInfo{PortType::Float, "a", QVariant(1.0)};
-    multiplyInfo.inputs["b"] = PortInfo{PortType::Float, "b", QVariant(1.0)};
-    multiplyInfo.outputs["result"] = PortInfo{PortType::Float, "result", QVariant()};
-    multiplyInfo.displayColor = "#4A9EFF";
-    multiplyInfo.categoryId = "Math";
-    multiplyInfo.subCategory = "Basic Operations";
-    model.registerNodeType("Multiply", multiplyInfo);
-
-    NodeTypeInfo outputInfo;
-    outputInfo.inputs["value"] = PortInfo{PortType::Float, "value", QVariant(0.0)};
-    outputInfo.displayColor = "#FF6B6B";
-    outputInfo.categoryId = "Output";
-    outputInfo.subCategory = "Debug";
-    model.registerNodeType("Output", outputInfo);
+    {
+        NodeTypeInfo info;
+        info.inputs["input"] = PortInfo{PortType::Float, "input", QVariant(0.0)};
+        info.outputs["value"] = PortInfo{PortType::Float, "value", QVariant()};
+        info.displayColor = "#4CDF8B";
+        info.categoryId = "Demo";
+        info.subCategory = "Values";
+        info.nodeName = "Demo Input";
+        model.registerNodeType("demo/input", info);
+    }
+    {
+        NodeTypeInfo info;
+        info.inputs["a"] = PortInfo{PortType::Float, "a", QVariant(0.0)};
+        info.inputs["b"] = PortInfo{PortType::Float, "b", QVariant(0.0)};
+        info.outputs["result"] = PortInfo{PortType::Float, "result", QVariant()};
+        info.displayColor = "#FF9F43";
+        info.categoryId = "Demo";
+        info.subCategory = "Math";
+        info.nodeName = "Demo Add";
+        model.registerNodeType("demo/add", info);
+    }
+    {
+        NodeTypeInfo info;
+        info.inputs["a"] = PortInfo{PortType::Float, "a", QVariant(1.0)};
+        info.inputs["b"] = PortInfo{PortType::Float, "b", QVariant(1.0)};
+        info.outputs["result"] = PortInfo{PortType::Float, "result", QVariant()};
+        info.displayColor = "#4A9EFF";
+        info.categoryId = "Demo";
+        info.subCategory = "Math";
+        info.nodeName = "Demo Multiply";
+        model.registerNodeType("demo/multiply", info);
+    }
+    {
+        NodeTypeInfo info;
+        info.inputs["value"] = PortInfo{PortType::Float, "value", QVariant(0.0)};
+        info.displayColor = "#FF6B6B";
+        info.categoryId = "Demo";
+        info.subCategory = "Debug";
+        info.nodeName = "Demo Output";
+        model.registerNodeType("demo/output", info);
+    }
 
     // Pass registration model via context property so tabs can reference it
     QQmlApplicationEngine engine;

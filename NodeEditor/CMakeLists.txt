@@ -11,6 +11,15 @@ qt_add_library(NodeEditorCore STATIC
     include/NodeEditor/BaseNode.h
     include/NodeEditor/DefaultNodes.h
     src/nodes/system/SystemNodes.h
+    src/nodes/math/MathNodes.h
+    src/nodes/color/ColorNodes.h
+    src/nodes/data/DataNodes.h
+    src/nodes/logic/LogicNodes.h
+    src/nodes/events/EventNodes.h
+    src/nodes/generators/GeneratorNodes.h
+    src/nodes/output/OutputNodes.h
+    src/nodes/qt/QtNodes.h
+    src/nodes/utility/UtilityNodes.h
 )
 
 target_include_directories(NodeEditorCore PUBLIC

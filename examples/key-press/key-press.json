@@ -1,0 +1,1 @@
+{"nodes":[{"id":"kp","type":"keyPress/capture","x":50,"y":200,"data":{}},{"id":"bi","type":"output/display/boolean","x":350,"y":200,"data":{}}],"edges":[{"id":"ke1","sourceNodeId":"kp","sourcePort":"isPressed","targetNodeId":"bi","targetPort":"value"}]}

@@ -4,8 +4,8 @@
 
 namespace NodeEditor {
 
-// InputNode: no inputs, one Output "value"
-class InputNode : public BaseNode {
+// DemoInputNode: no inputs, one Output "value"
+class DemoInputNode : public BaseNode {
     Q_OBJECT
 public:
     using BaseNode::BaseNode;
@@ -27,15 +27,15 @@ public:
         return {{PortType::Float, "value", QVariant()}};
     }
 
-    QString nodeType() const override { return "Input"; }
-    QString nodeName() const override { return "Input"; }
-    QString nodeCategory() const override { return "Input"; }
-    QString nodeSubCategory() const override { return "Input"; }
+    QString nodeType() const override { return "demo/input"; }
+    QString nodeName() const override { return "Demo Input"; }
+    QString nodeCategory() const override { return "Demo"; }
+    QString nodeSubCategory() const override { return "Values"; }
     QString displayColor() const override { return "#4CDF8B"; }
 };
 
-// AddNode: inputs a+b, output result
-class AddNode : public BaseNode {
+// DemoAddNode: inputs a+b, output result
+class DemoAddNode : public BaseNode {
     Q_OBJECT
 public:
     using BaseNode::BaseNode;
@@ -60,15 +60,15 @@ public:
         return {{PortType::Float, "result", QVariant()}};
     }
 
-    QString nodeType() const override { return "Add"; }
-    QString nodeName() const override { return "Add"; }
-    QString nodeCategory() const override { return "Math"; }
-    QString nodeSubCategory() const override { return "Basic Operations"; }
+    QString nodeType() const override { return "demo/add"; }
+    QString nodeName() const override { return "Demo Add"; }
+    QString nodeCategory() const override { return "Demo"; }
+    QString nodeSubCategory() const override { return "Math"; }
     QString displayColor() const override { return "#FF9F43"; }
 };
 
-// MultiplyNode: inputs a*b, output result
-class MultiplyNode : public BaseNode {
+// DemoMultiplyNode: inputs a*b, output result
+class DemoMultiplyNode : public BaseNode {
     Q_OBJECT
 public:
     using BaseNode::BaseNode;
@@ -93,15 +93,15 @@ public:
         return {{PortType::Float, "result", QVariant()}};
     }
 
-    QString nodeType() const override { return "Multiply"; }
-    QString nodeName() const override { return "Multiply"; }
-    QString nodeCategory() const override { return "Math"; }
-    QString nodeSubCategory() const override { return "Basic Operations"; }
+    QString nodeType() const override { return "demo/multiply"; }
+    QString nodeName() const override { return "Demo Multiply"; }
+    QString nodeCategory() const override { return "Demo"; }
+    QString nodeSubCategory() const override { return "Math"; }
     QString displayColor() const override { return "#4A9EFF"; }
 };
 
-// OutputNode: one input "value", displays/sinks it
-class OutputNode : public BaseNode {
+// DemoOutputNode: one input "value", displays/sinks it
+class DemoOutputNode : public BaseNode {
     Q_OBJECT
 public:
     using BaseNode::BaseNode;
@@ -124,9 +124,9 @@ public:
         return {};
     }
 
-    QString nodeType() const override { return "Output"; }
-    QString nodeName() const override { return "Output"; }
-    QString nodeCategory() const override { return "Output"; }
+    QString nodeType() const override { return "demo/output"; }
+    QString nodeName() const override { return "Demo Output"; }
+    QString nodeCategory() const override { return "Demo"; }
     QString nodeSubCategory() const override { return "Debug"; }
     QString displayColor() const override { return "#FF6B6B"; }
 };

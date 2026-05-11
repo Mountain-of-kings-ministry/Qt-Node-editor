@@ -329,11 +329,11 @@ public:
     }
 };
 
-class LengthNode : public BaseNode {
+class CountNode : public BaseNode {
     Q_OBJECT
 public:
-    QString nodeType() const override { return "utility/collections/length"; }
-    QString nodeName() const override { return "Length"; }
+    QString nodeType() const override { return "utility/collections/count"; }
+    QString nodeName() const override { return "Count"; }
     QString nodeCategory() const override { return "Utility"; }
     QString nodeSubCategory() const override { return "Collections"; }
     QString displayColor() const override { return "#00CEC9"; }
@@ -555,5 +555,37 @@ public:
         return {{"hash", QString::fromLatin1(hash.toHex())}};
     }
 };
+
+inline void registerUtilityNodeTypes(GraphModel *model)
+{
+    if (!model) return;
+    model->registerCategory({"Utility", "Utility", QColor("#00B894")});
+    registerNodeType<SequenceNode>(model, "Utility");
+    registerNodeType<BranchNode>(model, "Utility");
+    registerNodeType<SwitchNode>(model, "Utility");
+    registerNodeType<GateNode>(model, "Utility");
+    registerNodeType<DelayNode>(model, "Utility");
+    registerNodeType<TimerNode>(model, "Utility");
+    registerNodeType<RerouteNode>(model, "Utility");
+    registerNodeType<CacheNode>(model, "Utility");
+    registerNodeType<ConstantNode>(model, "Utility");
+    registerNodeType<DebugPrintNode>(model, "Utility");
+    registerNodeType<WatchNode>(model, "Utility");
+    registerNodeType<TypeConvertNode>(model, "Utility");
+    registerNodeType<MakeArrayNode>(model, "Utility");
+    registerNodeType<AppendArrayNode>(model, "Utility");
+    registerNodeType<RemoveArrayItemNode>(model, "Utility");
+    registerNodeType<CountNode>(model, "Utility");
+    registerNodeType<ContainsNode>(model, "Utility");
+    registerNodeType<ConcatNode>(model, "Utility");
+    registerNodeType<SplitNode>(model, "Utility");
+    registerNodeType<ReplaceNode>(model, "Utility");
+    registerNodeType<RegexNode>(model, "Utility");
+    registerNodeType<ToUpperNode>(model, "Utility");
+    registerNodeType<ToLowerNode>(model, "Utility");
+    registerNodeType<UUIDGenerateNode>(model, "Utility");
+    registerNodeType<MD5Node>(model, "Utility");
+    registerNodeType<SHA256Node>(model, "Utility");
+}
 
 } // namespace NodeEditor

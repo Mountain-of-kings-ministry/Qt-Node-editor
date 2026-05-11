@@ -1,5 +1,14 @@
 #include "NodeEditor/DefaultNodes.h"
 #include "system/SystemNodes.h"
+#include "math/MathNodes.h"
+#include "color/ColorNodes.h"
+#include "data/DataNodes.h"
+#include "logic/LogicNodes.h"
+#include "events/EventNodes.h"
+#include "generators/GeneratorNodes.h"
+#include "output/OutputNodes.h"
+#include "qt/QtNodes.h"
+#include "utility/UtilityNodes.h"
 #include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -118,46 +127,56 @@ void registerDefaultNodeTypes(GraphModel *model)
 {
     if (!model) return;
 
-    // Register BaseNode factories
+    // --- Default/legacy node registrations (CanvasInput, CanvasOutput, JsonInput) ---
+    model->registerCategory({"Input", "Input", QColor("#4CDF8B")});
+    model->registerCategory({"SubGraph", "SubGraph", QColor("#6C5CE7")});
+
     BaseNode::registerType("CanvasInput", []() { return new CanvasInputNode(); });
     BaseNode::registerType("CanvasOutput", []() { return new CanvasOutputNode(); });
     BaseNode::registerType("JsonInput", []() { return new JsonInputNode(); });
-    // Register system node types (CanvasNode etc.)
+
+    {
+        NodeTypeInfo info;
+        info.inputs["value"] = PortInfo{PortType::Generic, "value", QVariant()};
+        info.outputs["value"] = PortInfo{PortType::Generic, "value", QVariant()};
+        info.displayColor = "#6C5CE7";
+        info.categoryId = "SubGraph";
+        info.subCategory = "Interface";
+        info.nodeName = "Canvas Input";
+        model->registerNodeType("CanvasInput", info);
+    }
+    {
+        NodeTypeInfo info;
+        info.inputs["value"] = PortInfo{PortType::Generic, "value", QVariant()};
+        info.outputs["value"] = PortInfo{PortType::Generic, "value", QVariant()};
+        info.displayColor = "#E17055";
+        info.categoryId = "SubGraph";
+        info.subCategory = "Interface";
+        info.nodeName = "Canvas Output";
+        model->registerNodeType("CanvasOutput", info);
+    }
+    {
+        NodeTypeInfo info;
+        info.inputs["filePath"] = PortInfo{PortType::String, "filePath", QVariant("")};
+        info.outputs["output"] = PortInfo{PortType::Generic, "output", QVariant()};
+        info.displayColor = "#00CEC9";
+        info.categoryId = "Input";
+        info.subCategory = "File";
+        info.nodeName = "JSON Input";
+        model->registerNodeType("JsonInput", info);
+    }
+
+    // --- Category node registrations ---
     registerSystemNodeTypes(model);
-
-    // Register category
-    model->registerCategory({"SubGraph", "SubGraph", QColor("#6C5CE7")});
-
-    // CanvasInput metadata
-    NodeTypeInfo canvasInputInfo;
-    canvasInputInfo.inputs["value"] = PortInfo{PortType::Generic, "value", QVariant()};
-    canvasInputInfo.outputs["value"] = PortInfo{PortType::Generic, "value", QVariant()};
-    canvasInputInfo.displayColor = "#6C5CE7";
-    canvasInputInfo.categoryId = "SubGraph";
-    canvasInputInfo.subCategory = "Interface";
-    canvasInputInfo.nodeName = "Canvas Input";
-    model->registerNodeType("CanvasInput", canvasInputInfo);
-
-    // CanvasOutput metadata
-    NodeTypeInfo canvasOutputInfo;
-    canvasOutputInfo.inputs["value"] = PortInfo{PortType::Generic, "value", QVariant()};
-    canvasOutputInfo.outputs["value"] = PortInfo{PortType::Generic, "value", QVariant()};
-    canvasOutputInfo.displayColor = "#E17055";
-    canvasOutputInfo.categoryId = "SubGraph";
-    canvasOutputInfo.subCategory = "Interface";
-    canvasOutputInfo.nodeName = "Canvas Output";
-    model->registerNodeType("CanvasOutput", canvasOutputInfo);
-
-    // JsonInput metadata
-    NodeTypeInfo jsonInputInfo;
-    jsonInputInfo.inputs["filePath"] = PortInfo{PortType::String, "filePath", QVariant("")};
-    jsonInputInfo.outputs["output"] = PortInfo{PortType::Generic, "output", QVariant()};
-    jsonInputInfo.displayColor = "#00CEC9";
-    jsonInputInfo.categoryId = "Input";
-    jsonInputInfo.subCategory = "File";
-    jsonInputInfo.nodeName = "JSON Input";
-    model->registerNodeType("JsonInput", jsonInputInfo);
-
+    registerMathNodeTypes(model);
+    registerColorNodeTypes(model);
+    registerDataNodeTypes(model);
+    registerLogicNodeTypes(model);
+    registerEventNodeTypes(model);
+    registerGeneratorNodeTypes(model);
+    registerOutputNodeTypes(model);
+    registerQtNodeTypes(model);
+    registerUtilityNodeTypes(model);
 }
 
 } // namespace NodeEditor

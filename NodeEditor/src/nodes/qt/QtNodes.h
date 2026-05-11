@@ -214,4 +214,20 @@ public:
     }
 };
 
+inline void registerQtNodeTypes(GraphModel *model)
+{
+    if (!model) return;
+    model->registerCategory({"Qt", "Qt", QColor("#4A9EFF")});
+    registerNodeType<ConnectSignalNode>(model, "Qt");
+    registerNodeType<EmitSignalNode>(model, "Qt");
+    registerNodeType<SetPropertyNode>(model, "Qt");
+    registerNodeType<GetPropertyNode>(model, "Qt");
+    registerNodeType<InvokeMethodNode>(model, "Qt");
+    registerNodeType<ButtonClickedNode>(model, "Qt");
+    registerNodeType<SliderValueNode>(model, "Qt");
+    registerNodeType<TextChangedNode>(model, "Qt");
+    registerNodeType<QMLPropertyNode>(model, "Qt");
+    registerNodeType<QMLSignalNode>(model, "Qt");
+}
+
 } // namespace NodeEditor

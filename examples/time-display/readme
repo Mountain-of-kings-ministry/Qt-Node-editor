@@ -1,5 +1,28 @@
-this demo is for displaying the current time on the node, using led matrix
-make the nodes required
+# Time Display Example
 
+Displays the current system time using the `CurrentTimeNode` connected to visual display nodes.
 
-write the node connection json so i wont have to wire it my self i just import it
+## Nodes Used
+
+- `system/info/currentTime` — outputs formatted time string and numeric timestamp
+- `output/display/text` — shows the time string inline in the node body
+- `output/display/number` — shows the timestamp inline in the node body
+
+## Graph
+
+1. Add a `CurrentTimeNode` (System → Info)
+2. Add a `TextDisplay` node (Output → Value)
+3. Add a `NumberDisplay` node (Output → Value)
+4. Connect `CurrentTimeNode.time` → `TextDisplay.text`
+5. Connect `CurrentTimeNode.timestamp` → `NumberDisplay.value`
+
+## Pre-made Graph
+
+Import `time-display.json` via the File menu to load the wired graph instantly.
+
+## Build & Run
+
+```bash
+cmake --build --preset debug
+./build/debug/examples/time-display/TimeDisplayApp
+```
