@@ -403,12 +403,7 @@ Item {
             if (effectiveGraphModel) {
                 var file = openFileDialog.selectedFile.toString()
                 file = file.replace(/^(file:\/{2})/, "")
-                var xhr = new XMLHttpRequest()
-                xhr.open("GET", file, false)
-                xhr.send()
-                if (xhr.status === 200) {
-                    effectiveGraphModel.qmlDeserializeFromJson(xhr.responseText)
-                }
+                effectiveGraphModel.qmlLoadFromFile(file)
             }
         }
     }
@@ -421,10 +416,9 @@ Item {
         defaultSuffix: "json"
         onAccepted: {
             if (effectiveGraphModel) {
-                var json = effectiveGraphModel.qmlSerializeToJson()
                 var file = saveAsDialog.selectedFile.toString()
                 file = file.replace(/^(file:\/{2})/, "")
-                saveFile(file, json)
+                effectiveGraphModel.qmlSaveToFile(file)
             }
         }
     }
@@ -549,19 +543,7 @@ Item {
 
     function saveCurrentGraph() {
         if (!effectiveGraphModel) return
-        var json = effectiveGraphModel.qmlSerializeToJson()
-        saveFile("graph_" + Date.now() + ".json", json)
-    }
-
-    function saveFile(path, content) {
-        // Write via XMLHttpRequest PUT to file scheme (Qt 6 supports this)
-        try {
-            var xhr = new XMLHttpRequest()
-            xhr.open("PUT", "file://" + path, false)
-            xhr.send(content)
-        } catch (e) {
-            console.warn("Save failed:", e.toString())
-        }
+        effectiveGraphModel.qmlSaveToFile("graph_" + Date.now() + ".json")
     }
 
     // Expose internal components

@@ -69,6 +69,8 @@ Triggered by `nodeDataChanged`, `nodeAdded`, and `edgeAdded` signals.
 | `qmlEdgeIds()` | List all edge IDs |
 | `qmlEdgeInfo(edgeId)` | Get edge metadata as QVariantMap |
 | `qmlIsPortConnected(nodeId, port, isInput)` | Check if a port has a connection |
+| `qmlSaveToFile(path)` | Save graph to a file on disk (C++ QFile, no XMLHttpRequest) |
+| `qmlLoadFromFile(path)` | Load graph from a file on disk |
 | `clear()` | Remove all nodes and edges |
 
 ## Port Types

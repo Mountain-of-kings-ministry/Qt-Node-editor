@@ -2,6 +2,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QFile>
 #include <algorithm>
 
 namespace NodeEditor {
@@ -599,17 +600,17 @@ void GraphModel::qmlDeserializeFromJson(const QString &json)
 void GraphModel::clear()
 {
     auto edgeIds = m_edges;
+    auto nodeIds = m_nodes;
+    m_edges.clear();
+    m_nodes.clear();
     for (const auto &e : edgeIds) {
         emit edgeRemoved(e.id);
         emit qmlEdgeRemoved(uuidToStr(e.id));
     }
-    m_edges.clear();
-    auto nodeIds = m_nodes;
     for (const auto &n : nodeIds) {
         emit nodeRemoved(n.id);
         emit qmlNodeRemoved(uuidToStr(n.id));
     }
-    m_nodes.clear();
 }
 
 // ── ID conversion ─────────────────────────────────────────
@@ -622,6 +623,27 @@ QString GraphModel::uuidToStr(const QUuid &id)
 QUuid GraphModel::strToUuid(const QString &str)
 {
     return QUuid::fromString(str);
+}
+
+bool GraphModel::qmlSaveToFile(const QString &path)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly))
+        return false;
+    file.write(qmlSerializeToJson().toUtf8());
+    file.close();
+    return true;
+}
+
+bool GraphModel::qmlLoadFromFile(const QString &path)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly))
+        return false;
+    QString json = QString::fromUtf8(file.readAll());
+    file.close();
+    qmlDeserializeFromJson(json);
+    return true;
 }
 
 } // namespace NodeEditor

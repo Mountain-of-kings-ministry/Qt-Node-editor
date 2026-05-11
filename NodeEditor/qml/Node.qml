@@ -261,6 +261,11 @@ Item {
             }
         }
 
+        Rectangle {
+            height: 3
+            Layouts.width: parent.width
+        }
+
         Column {
             id: outputColumn
             anchors.top: inputColumn.bottom

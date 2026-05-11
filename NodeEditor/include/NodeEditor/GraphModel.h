@@ -107,6 +107,8 @@ public:
     // Serialization
     Q_INVOKABLE QString qmlSerializeToJson() const;
     Q_INVOKABLE void qmlDeserializeFromJson(const QString &json);
+    Q_INVOKABLE bool qmlSaveToFile(const QString &path);
+    Q_INVOKABLE bool qmlLoadFromFile(const QString &path);
     Q_INVOKABLE void clear();
 
     // QML-friendly API (uses QString for IDs)
