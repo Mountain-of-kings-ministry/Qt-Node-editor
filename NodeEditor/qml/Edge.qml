@@ -23,25 +23,35 @@ Shape {
     width: 0
     height: 0
 
+    function portCenterY(info, portName, isOutput) {
+        if (isOutput) {
+            var ports = info.outputPorts || []
+            var idx = ports.indexOf(portName)
+            if (idx < 0) return info.y + 36
+            var numInputs = (info.inputPorts || []).length
+            if (numInputs > 0)
+                return info.y + 44 + numInputs * 22 + idx * 22
+            else
+                return info.y + 36 + idx * 22
+        } else {
+            var ports2 = info.inputPorts || []
+            var idx2 = ports2.indexOf(portName)
+            if (idx2 < 0) return info.y + 42
+            return info.y + 42 + idx2 * 22
+        }
+    }
+
     function updatePositions() {
         if (!graphModel) return
         var srcInfo = graphModel.qmlNodeInfo(sourceNodeId)
         var tgtInfo = graphModel.qmlNodeInfo(targetNodeId)
         if (!srcInfo || !tgtInfo) return
 
-        sourceX = srcInfo.x + 160
-        sourceY = srcInfo.y + 30 + 7
+        sourceX = srcInfo.x + 165
+        sourceY = root.portCenterY(srcInfo, sourcePort, true)
 
-        var outIdx = srcInfo.outputPorts ? srcInfo.outputPorts.indexOf(sourcePort) : -1
-        if (outIdx >= 0)
-            sourceY = srcInfo.y + 42 + outIdx * 22
-
-        targetX = tgtInfo.x
-        var inIdx = tgtInfo.inputPorts ? tgtInfo.inputPorts.indexOf(targetPort) : -1
-        if (inIdx >= 0)
-            targetY = tgtInfo.y + 42 + inIdx * 22
-        else
-            targetY = tgtInfo.y + 30 + 7
+        targetX = tgtInfo.x + 15
+        targetY = root.portCenterY(tgtInfo, targetPort, false)
     }
 
     Connections {
@@ -54,8 +64,12 @@ Shape {
 
     Component.onCompleted: updatePositions()
 
+    // Arrow head helper: returns the angle from source to target
+    function angle() {
+        return Math.atan2(targetY - sourceY, targetX - sourceX)
+    }
+
     ShapePath {
-        id: shapePath
         strokeColor: root.hovered ? "#00B4FF" : "#888888"
         strokeWidth: root.hovered ? 3 : 2
         fillColor: "transparent"
@@ -65,11 +79,47 @@ Shape {
         startX: root.sourceX
         startY: root.sourceY
 
-        PathCubic {
-            control1X: root.sourceX + Math.max(60, Math.abs(root.targetX - root.sourceX) * 0.5)
-            control1Y: root.sourceY
-            control2X: root.targetX - Math.max(60, Math.abs(root.targetX - root.sourceX) * 0.5)
-            control2Y: root.targetY
+        PathLine {
+            x: root.targetX - Math.cos(root.angle()) * 8
+            y: root.targetY - Math.sin(root.angle()) * 8
+        }
+    }
+
+    // Arrow head (filled triangle)
+    ShapePath {
+        strokeColor: root.hovered ? "#00B4FF" : "#888888"
+        strokeWidth: 1
+        fillColor: root.hovered ? "#00B4FF" : "#888888"
+        capStyle: ShapePath.RoundCap
+        joinStyle: ShapePath.RoundJoin
+
+        startX: root.targetX
+        startY: root.targetY
+
+        PathLine {
+            x: root.targetX - Math.cos(root.angle() - 0.4) * 10
+            y: root.targetY - Math.sin(root.angle() - 0.4) * 10
+        }
+        PathLine {
+            x: root.targetX - Math.cos(root.angle() + 0.4) * 10
+            y: root.targetY - Math.sin(root.angle() + 0.4) * 10
+        }
+        PathLine {
+            x: root.targetX
+            y: root.targetY
+        }
+    }
+
+    // Invisible wider hit area for mouse interaction
+    ShapePath {
+        strokeColor: "transparent"
+        strokeWidth: 14
+        fillColor: "transparent"
+
+        startX: root.sourceX
+        startY: root.sourceY
+
+        PathLine {
             x: root.targetX
             y: root.targetY
         }

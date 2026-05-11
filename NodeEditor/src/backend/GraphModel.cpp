@@ -22,10 +22,16 @@ QUuid GraphModel::addNode(const QString &type, const QPointF &position, const QU
     data.position = position;
 
     if (auto *info = nodeTypeInfo(type)) {
-        for (auto it = info->inputs.begin(); it != info->inputs.end(); ++it)
+        for (auto it = info->inputs.begin(); it != info->inputs.end(); ++it) {
             data.inputs[it.key()] = it.value();
-        for (auto it = info->outputs.begin(); it != info->outputs.end(); ++it)
+            if (it.value().defaultValue.isValid())
+                data.data[it.key()] = it.value().defaultValue;
+        }
+        for (auto it = info->outputs.begin(); it != info->outputs.end(); ++it) {
             data.outputs[it.key()] = it.value();
+            if (it.value().defaultValue.isValid())
+                data.data[it.key()] = it.value().defaultValue;
+        }
     }
 
     m_nodes.append(data);
@@ -37,6 +43,23 @@ QUuid GraphModel::addNode(const QString &type, const QPointF &position, const QU
 void GraphModel::removeNode(const QUuid &nodeId)
 {
     QString idStr = uuidToStr(nodeId);
+
+    // Collect downstream targets and removed edges before removal
+    QList<QUuid> downstreamNodes;
+    QList<QString> downstreamPorts;
+    QList<QUuid> removedEdgeIds;
+    QList<QString> removedEdgeIdStrs;
+    for (const auto &e : m_edges) {
+        if (e.sourceNodeId == nodeId) {
+            downstreamNodes.append(e.targetNodeId);
+            downstreamPorts.append(e.targetPort);
+        }
+        if (e.sourceNodeId == nodeId || e.targetNodeId == nodeId) {
+            removedEdgeIds.append(e.id);
+            removedEdgeIdStrs.append(uuidToStr(e.id));
+        }
+    }
+
     m_edges.erase(
         std::remove_if(m_edges.begin(), m_edges.end(),
             [&](const EdgeData &e) {
@@ -48,6 +71,22 @@ void GraphModel::removeNode(const QUuid &nodeId)
         std::remove_if(m_nodes.begin(), m_nodes.end(),
             [&](const NodeData &n) { return n.id == nodeId; }),
         m_nodes.end());
+
+    // Notify QML about removed edges so they disappear from canvas
+    for (int i = 0; i < removedEdgeIds.size(); ++i) {
+        emit edgeRemoved(removedEdgeIds[i]);
+        emit qmlEdgeRemoved(removedEdgeIdStrs[i]);
+    }
+
+    // Reset downstream input ports to their type defaults
+    for (int i = 0; i < downstreamNodes.size(); ++i) {
+        auto *targetNode = node(downstreamNodes[i]);
+        if (!targetNode) continue;
+        auto *typeInfo = nodeTypeInfo(targetNode->type);
+        if (typeInfo && typeInfo->inputs.contains(downstreamPorts[i]))
+            setNodeData(downstreamNodes[i], downstreamPorts[i],
+                        typeInfo->inputs[downstreamPorts[i]].defaultValue);
+    }
 
     emit nodeRemoved(nodeId);
     emit qmlNodeRemoved(idStr);
@@ -83,11 +122,34 @@ QUuid GraphModel::connectPorts(const QUuid &sourceNode, const QString &sourcePor
 
 void GraphModel::disconnectEdge(const QUuid &edgeId)
 {
+    // Find edge info before removal
+    QUuid targetNodeId;
+    QString targetPort;
+    for (const auto &e : m_edges) {
+        if (e.id == edgeId) {
+            targetNodeId = e.targetNodeId;
+            targetPort = e.targetPort;
+            break;
+        }
+    }
+
     QString idStr = uuidToStr(edgeId);
     m_edges.erase(
         std::remove_if(m_edges.begin(), m_edges.end(),
             [&](const EdgeData &e) { return e.id == edgeId; }),
         m_edges.end());
+
+    // Reset target input to its type default
+    if (!targetNodeId.isNull()) {
+        auto *targetNode = node(targetNodeId);
+        if (targetNode) {
+            auto *typeInfo = nodeTypeInfo(targetNode->type);
+            if (typeInfo && typeInfo->inputs.contains(targetPort))
+                setNodeData(targetNodeId, targetPort,
+                            typeInfo->inputs[targetPort].defaultValue);
+        }
+    }
+
     emit edgeRemoved(edgeId);
     emit qmlEdgeRemoved(idStr);
 }
@@ -382,6 +444,21 @@ int GraphModel::qmlPortType(const QString &nodeId, const QString &port, bool isI
         }
     }
     return static_cast<int>(PortType::Generic);
+}
+
+bool GraphModel::qmlIsPortConnected(const QString &nodeId, const QString &port, bool isInput) const
+{
+    QUuid id = strToUuid(nodeId);
+    for (const auto &e : m_edges) {
+        if (isInput) {
+            if (e.targetNodeId == id && e.targetPort == port)
+                return true;
+        } else {
+            if (e.sourceNodeId == id && e.sourcePort == port)
+                return true;
+        }
+    }
+    return false;
 }
 
 // ── Static helpers ────────────────────────────────────────

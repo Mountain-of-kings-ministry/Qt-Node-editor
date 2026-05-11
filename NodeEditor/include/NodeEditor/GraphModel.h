@@ -107,7 +107,7 @@ public:
     // Serialization
     Q_INVOKABLE QString qmlSerializeToJson() const;
     Q_INVOKABLE void qmlDeserializeFromJson(const QString &json);
-    void clear();
+    Q_INVOKABLE void clear();
 
     // QML-friendly API (uses QString for IDs)
     Q_INVOKABLE QString qmlAddNode(const QString &type, double x, double y);
@@ -125,6 +125,7 @@ public:
     Q_INVOKABLE QStringList qmlNodeInputPorts(const QString &nodeId) const;
     Q_INVOKABLE QStringList qmlNodeOutputPorts(const QString &nodeId) const;
     Q_INVOKABLE int qmlPortType(const QString &nodeId, const QString &port, bool isInput) const;
+    Q_INVOKABLE bool qmlIsPortConnected(const QString &nodeId, const QString &port, bool isInput) const;
 
     // Static helpers
     static int portTypeToInt(PortType t);

@@ -10,16 +10,16 @@ The central data model for a node graph. Manages nodes, edges, data, and topolog
 | Method | Description |
 |---|---|
 | `addNode(type, position, existingId)` | Add a node of the given type |
-| `removeNode(nodeId)` | Remove a node and its edges |
+| `removeNode(nodeId)` | Remove a node and its edges; resets downstream input ports to defaults |
 | `connectPorts(src, srcPort, tgt, tgtPort)` | Create an edge between ports |
-| `disconnectEdge(edgeId)` | Remove an edge |
+| `disconnectEdge(edgeId)` | Remove an edge; resets target input port to default |
 | `setNodeData(nodeId, key, value)` | Set a node's data value |
 | `nodeData(nodeId, key)` | Get a node's data value |
 | `topologicalSort()` | Return nodes in dependency order |
 | `hasCycles()` | Check for cycles in the graph |
 | `registerNodeType(type, info)` | Register a node type |
 | `registerCategory(category)` | Register a node category |
-| `clear()` | Remove all nodes and edges |
+| `clear()` | Remove all nodes and edges (Q_INVOKABLE) |
 
 ### UndoManager
 `include/NodeEditor/UndoManager.h`
@@ -51,7 +51,25 @@ Abstract base for custom nodes.
 ### DataFlowEngine
 `include/NodeEditor/DataFlowEngine.h`
 
-Propagates data through the graph. Listens to `GraphModel` signals.
+Propagates data through the graph. Writes resolved input values back to the model so QML can display them.
+Triggered by `nodeDataChanged`, `nodeAdded`, and `edgeAdded` signals.
+
+## QML API (GraphModel)
+
+| Method | Description |
+|---|---|
+| `qmlAddNode(type, x, y)` | Add a node from QML |
+| `qmlRemoveNode(nodeId)` | Remove a node from QML |
+| `qmlNodeIds()` | List all node IDs |
+| `qmlNodeInfo(nodeId)` | Get node metadata as QVariantMap |
+| `qmlNodeData(nodeId, key)` | Get a node's data value |
+| `qmlSetNodeData(nodeId, key, value)` | Set a node's data value |
+| `qmlConnectPorts(src, srcPort, tgt, tgtPort)` | Create an edge |
+| `qmlDisconnectEdge(edgeId)` | Remove an edge |
+| `qmlEdgeIds()` | List all edge IDs |
+| `qmlEdgeInfo(edgeId)` | Get edge metadata as QVariantMap |
+| `qmlIsPortConnected(nodeId, port, isInput)` | Check if a port has a connection |
+| `clear()` | Remove all nodes and edges |
 
 ## Port Types
 
@@ -87,17 +105,17 @@ Searchable popup for adding nodes by type.
 **Properties**: `graphModel`, `undoManager`
 
 ### Node
-Visual representation of a graph node.
+Visual representation of a graph node. Input TextFields become read-only when the port is connected to an output. Output values are displayed in green.
 
 **Properties**: `graphModel`, `undoManager`, `nodeId`, `nodeInfo`, `selected`
 
 ### Edge
-Visual connection between two ports.
+Visual connection between two ports (straight line + arrow head).
 
 **Properties**: `graphModel`, `undoManager`, `edgeId`, `sourceNodeId`, `sourcePort`, `targetNodeId`, `targetPort`
 
 ### Port
-Visual connection point on a node.
+Visual connection point on a node. 15 port types with distinct colors.
 
 **Properties**: `graphModel`, `nodeId`, `portName`, `isInput`, `portType`
 

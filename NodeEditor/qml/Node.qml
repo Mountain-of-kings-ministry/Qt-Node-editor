@@ -11,6 +11,8 @@ Item {
     property string nodeId: ""
     property var nodeInfo: ({})
     property bool selected: false
+    property int _dataVersion: 0
+    property int _connectionVersion: 0
 
     width: 180
     height: 30 + body.height
@@ -55,8 +57,20 @@ Item {
             }
         }
         function onQmlNodeDataChanged(id, key) {
-            if (id === root.nodeId)
+            if (id === root.nodeId) {
                 nodeInfo = graphModel.qmlNodeInfo(root.nodeId)
+                _dataVersion++
+            }
+        }
+        function onQmlEdgeAdded(id) {
+            if (!root.graphModel) return
+            var info = root.graphModel.qmlEdgeInfo(id)
+            if (info && (info.targetNodeId === root.nodeId || info.sourceNodeId === root.nodeId))
+                _connectionVersion++
+        }
+        function onQmlEdgeRemoved(id) {
+            // Edge is already gone, increment for all to be safe
+            _connectionVersion++
         }
     }
 
@@ -221,8 +235,14 @@ Item {
 
                         text: {
                             if (!root.graphModel) return ""
+                            root._dataVersion
                             var val = root.graphModel.qmlNodeData(root.nodeId, modelData)
                             return val !== undefined && val !== null ? String(val) : ""
+                        }
+
+                        readOnly: {
+                            root._connectionVersion
+                            root.graphModel ? root.graphModel.qmlIsPortConnected(root.nodeId, modelData, true) : false
                         }
 
                         onActiveFocusChanged: {
@@ -231,13 +251,10 @@ Item {
                         }
 
                         onEditingFinished: {
+                            if (root.graphModel && root.graphModel.qmlIsPortConnected(root.nodeId, modelData, true))
+                                return
                             if (root.undoManager && inputDelegate.dataOldVal !== text)
                                 root.undoManager.qmlSetNodeData(root.nodeId, modelData, inputDelegate.dataOldVal, text)
-                        }
-
-                        onTextChanged: {
-                            if (root.graphModel && root.nodeId)
-                                root.graphModel.qmlSetNodeData(root.nodeId, modelData, text)
                         }
                     }
                 }
@@ -254,7 +271,7 @@ Item {
             anchors.rightMargin: 8
             spacing: 6
 
-            Repeater {
+                Repeater {
                 model: nodeInfo.outputPorts || []
 
                 Item {
@@ -264,6 +281,19 @@ Item {
                     Text {
                         text: modelData
                         color: "#CCCCCC"
+                        font.pixelSize: 11
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.left: parent.left
+                    }
+
+                    Text {
+                        text: {
+                            if (!root.graphModel) return ""
+                            root._dataVersion
+                            var val = root.graphModel.qmlNodeData(root.nodeId, modelData)
+                            return val !== undefined && val !== null ? String(val) : ""
+                        }
+                        color: "#4CDF8B"
                         font.pixelSize: 11
                         anchors.verticalCenter: parent.verticalCenter
                         anchors.right: portItem.left

@@ -85,6 +85,21 @@ Item {
         return found
     }
 
+    function hitTestNode(screenX, screenY) {
+        if (!root.graphModel) return ""
+        var wp = root.screenToWorld(screenX, screenY)
+        var ids = root.graphModel.qmlNodeIds()
+        for (var i = 0; i < ids.length; i++) {
+            var info = root.graphModel.qmlNodeInfo(ids[i])
+            if (!info) continue
+            var nx = info.x || 0
+            var ny = info.y || 0
+            if (wp.x >= nx && wp.x <= nx + 180 && wp.y >= ny && wp.y <= ny + 120)
+                return ids[i]
+        }
+        return ""
+    }
+
     function fitToView() {
         if (!graphModel) return
         var ids = graphModel.qmlNodeIds()
@@ -106,8 +121,7 @@ Item {
         if (contentW <= 0 || contentH <= 0) return
         var scaleX = root.width / contentW
         var scaleY = root.height / contentH
-        root.zoom = Math.min(scaleX, scaleY)
-        root.zoom = Math.max(0.1, Math.min(5, root.zoom))
+        root.zoom = Math.max(0.1, Math.min(5, Math.min(scaleX, scaleY)))
         root.panX = -minX * root.zoom + margin * root.zoom
         root.panY = -minY * root.zoom + margin * root.zoom
         gridCanvas.requestPaint()
@@ -142,25 +156,18 @@ Item {
             onPaint: {
                 var ctx = getContext("2d")
                 ctx.reset()
-
                 ctx.lineWidth = 1
                 ctx.strokeStyle = "#333333"
-
                 var gs = gridSize()
                 var ox = root.panX % (gs * root.zoom)
                 var oy = root.panY % (gs * root.zoom)
                 if (ox > 0) ox -= gs * root.zoom
                 if (oy > 0) oy -= gs * root.zoom
-
                 ctx.beginPath()
-                for (var x = ox; x < width; x += gs * root.zoom) {
-                    ctx.moveTo(x + 0.5, 0)
-                    ctx.lineTo(x + 0.5, height)
-                }
-                for (var y = oy; y < height; y += gs * root.zoom) {
-                    ctx.moveTo(0, y + 0.5)
-                    ctx.lineTo(width, y + 0.5)
-                }
+                for (var x = ox; x < width; x += gs * root.zoom)
+                    { ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, height) }
+                for (var y = oy; y < height; y += gs * root.zoom)
+                    { ctx.moveTo(0, y + 0.5); ctx.lineTo(width, y + 0.5) }
                 ctx.stroke()
             }
         }
@@ -171,7 +178,6 @@ Item {
         rebuildEdgeList()
     }
 
-    // Synchronize node/edge lists with GraphModel signals
     Connections {
         target: root.graphModel
         function onQmlNodeAdded() { rebuildNodeList() }
@@ -199,9 +205,10 @@ Item {
     ListModel { id: nodeModel }
     ListModel { id: edgeModel }
 
-    // World container
+    // World container — z:10 so nodes sit above all interaction overlays
     Item {
         id: world
+        z: 10
         x: root.panX
         y: root.panY
         transform: Scale { origin.x: 0; origin.y: 0; xScale: root.zoom; yScale: root.zoom }
@@ -240,6 +247,120 @@ Item {
         }
     }
 
+    // ── Deselect overlay (below world, handles empty-space clicks, box-select, connections) ──
+    Rectangle {
+        id: deselectOverlay
+        anchors.fill: parent
+        z: 5
+        color: "transparent"
+
+        property bool isBoxSelecting: false
+        property real boxStartX: 0
+        property real boxStartY: 0
+
+        MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.LeftButton
+
+            onPressed: function(mouse) {
+                root.forceActiveFocus()
+
+                if (root.connecting) {
+                    // Let node ports handle their own release
+                    return
+                }
+
+                if (root.selectMode === "box") {
+                    deselectOverlay.isBoxSelecting = true
+                    deselectOverlay.boxStartX = mouse.x
+                    deselectOverlay.boxStartY = mouse.y
+                    boxSelectRect.x = mouse.x
+                    boxSelectRect.y = mouse.y
+                    boxSelectRect.width = 0
+                    boxSelectRect.height = 0
+                    boxSelectRect.boxSelectActive = true
+                    return
+                }
+
+                if (root.hitTestNode(mouse.x, mouse.y) === ""
+                        && !(mouse.modifiers & Qt.ControlModifier))
+                    root.clearSelection()
+            }
+
+            onPositionChanged: function(mouse) {
+                if (deselectOverlay.isBoxSelecting) {
+                    boxSelectRect.x = Math.min(deselectOverlay.boxStartX, mouse.x)
+                    boxSelectRect.y = Math.min(deselectOverlay.boxStartY, mouse.y)
+                    boxSelectRect.width = Math.abs(mouse.x - deselectOverlay.boxStartX)
+                    boxSelectRect.height = Math.abs(mouse.y - deselectOverlay.boxStartY)
+                }
+                if (root.connecting) {
+                    root.connectCurrentX = mouse.x
+                    root.connectCurrentY = mouse.y
+                    rubberBand.requestPaint()
+                }
+            }
+
+            onReleased: function(mouse) {
+                if (deselectOverlay.isBoxSelecting) {
+                    deselectOverlay.isBoxSelecting = false
+                    boxSelectRect.boxSelectActive = false
+                    if (boxSelectRect.width > 5 || boxSelectRect.height > 5) {
+                        var topLeft = root.screenToWorld(boxSelectRect.x, boxSelectRect.y)
+                        var bottomRight = root.screenToWorld(
+                            boxSelectRect.x + boxSelectRect.width,
+                            boxSelectRect.y + boxSelectRect.height)
+                        var found = root.nodesInRect(topLeft.x, topLeft.y, bottomRight.x, bottomRight.y)
+                        if (found.length > 0) {
+                            root.selectedNodeIds = found
+                            root.selectedNodeId = found[found.length - 1]
+                            nodeSelected(root.selectedNodeId)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ── Pan / zoom overlay (below world, handles middle/right button + wheel) ──
+    MouseArea {
+        id: canvasMouse
+        anchors.fill: parent
+        z: 0
+        acceptedButtons: Qt.MiddleButton | Qt.RightButton
+
+        property real lastPanX: 0
+        property real lastPanY: 0
+        property real panStartX: 0
+        property real panStartY: 0
+
+        onWheel: function(wheel) {
+            var oldZoom = root.zoom
+            var factor = wheel.angleDelta.y > 0 ? 1.15 : 1 / 1.15
+            root.zoom = Math.max(0.1, Math.min(5, root.zoom * factor))
+            root.panX = wheel.x - (wheel.x - root.panX) * (root.zoom / oldZoom)
+            root.panY = wheel.y - (wheel.y - root.panY) * (root.zoom / oldZoom)
+            gridCanvas.requestPaint()
+        }
+
+        onPressed: function(mouse) {
+            if (mouse.button === Qt.MiddleButton || mouse.button === Qt.RightButton) {
+                lastPanX = root.panX
+                lastPanY = root.panY
+                panStartX = mouse.x
+                panStartY = mouse.y
+            }
+        }
+
+        onPositionChanged: function(mouse) {
+            if (pressed && (mouse.button === Qt.MiddleButton || mouse.button === Qt.RightButton)) {
+                root.panX = lastPanX + (mouse.x - panStartX)
+                root.panY = lastPanY + (mouse.y - panStartY)
+                gridCanvas.requestPaint()
+            }
+        }
+    }
+
     // Box selection overlay
     Rectangle {
         id: boxSelectRect
@@ -250,11 +371,9 @@ Item {
         z: 999
 
         property bool boxSelectActive: false
-        property real boxStartX: 0
-        property real boxStartY: 0
     }
 
-    // Rubber band for connection creation
+    // Rubber band for connection creation (straight line + arrow head)
     Canvas {
         id: rubberBand
         visible: root.connecting
@@ -264,16 +383,30 @@ Item {
         onPaint: {
             var ctx = getContext("2d")
             ctx.reset()
+
+            var sx = root.connectStartX
+            var sy = root.connectStartY
+            var ex = root.connectCurrentX
+            var ey = root.connectCurrentY
+
+            var angle = Math.atan2(ey - sy, ex - sx)
+
+            // Line
             ctx.strokeStyle = "#00B4FF"
             ctx.lineWidth = 2
             ctx.beginPath()
-            ctx.moveTo(root.connectStartX, root.connectStartY)
-            var dx = Math.max(60, Math.abs(root.connectCurrentX - root.connectStartX) * 0.5)
-            ctx.bezierCurveTo(
-                root.connectStartX + dx, root.connectStartY,
-                root.connectCurrentX - dx, root.connectCurrentY,
-                root.connectCurrentX, root.connectCurrentY)
+            ctx.moveTo(sx, sy)
+            ctx.lineTo(ex - Math.cos(angle) * 8, ey - Math.sin(angle) * 8)
             ctx.stroke()
+
+            // Arrow head
+            ctx.fillStyle = "#00B4FF"
+            ctx.beginPath()
+            ctx.moveTo(ex, ey)
+            ctx.lineTo(ex - Math.cos(angle - 0.4) * 10, ey - Math.sin(angle - 0.4) * 10)
+            ctx.lineTo(ex - Math.cos(angle + 0.4) * 10, ey - Math.sin(angle + 0.4) * 10)
+            ctx.closePath()
+            ctx.fill()
         }
     }
 
@@ -291,108 +424,6 @@ Item {
             else
                 root.graphModel.qmlAddNode(nodeType, pos.x, pos.y)
             drop.accept()
-        }
-    }
-
-    function hitTestNode(screenX, screenY) {
-        if (!root.graphModel) return ""
-        var wp = root.screenToWorld(screenX, screenY)
-        var ids = root.graphModel.qmlNodeIds()
-        for (var i = 0; i < ids.length; i++) {
-            var info = root.graphModel.qmlNodeInfo(ids[i])
-            if (!info) continue
-            var nx = info.x || 0
-            var ny = info.y || 0
-            if (wp.x >= nx && wp.x <= nx + 180 && wp.y >= ny && wp.y <= ny + 120)
-                return ids[i]
-        }
-        return ""
-    }
-
-    // Interaction: pan + zoom + selection
-    MouseArea {
-        id: canvasMouse
-        anchors.fill: parent
-        acceptedButtons: Qt.MiddleButton | Qt.RightButton | Qt.LeftButton
-        propagateComposedEvents: true
-
-        property real lastPanX: 0
-        property real lastPanY: 0
-        property real panStartX: 0
-        property real panStartY: 0
-        property bool isBoxSelecting: false
-
-        onWheel: function(wheel) {
-            var oldZoom = root.zoom
-            var factor = wheel.angleDelta.y > 0 ? 1.15 : 1 / 1.15
-            root.zoom = Math.max(0.1, Math.min(5, root.zoom * factor))
-            root.panX = wheel.x - (wheel.x - root.panX) * (root.zoom / oldZoom)
-            root.panY = wheel.y - (wheel.y - root.panY) * (root.zoom / oldZoom)
-            gridCanvas.requestPaint()
-        }
-
-        onPressed: function(mouse) {
-            root.forceActiveFocus()
-            if (mouse.button === Qt.LeftButton && root.selectMode === "box" && !root.connecting) {
-                isBoxSelecting = true
-                boxSelectRect.boxStartX = mouse.x
-                boxSelectRect.boxStartY = mouse.y
-                boxSelectRect.x = mouse.x
-                boxSelectRect.y = mouse.y
-                boxSelectRect.width = 0
-                boxSelectRect.height = 0
-                boxSelectRect.boxSelectActive = true
-                return
-            }
-            if (mouse.button === Qt.LeftButton && !root.connecting) {
-                if (root.hitTestNode(mouse.x, mouse.y) === "" && !(mouse.modifiers & Qt.ControlModifier))
-                    root.clearSelection()
-                return
-            }
-            if (mouse.button === Qt.MiddleButton || mouse.button === Qt.RightButton) {
-                lastPanX = root.panX
-                lastPanY = root.panY
-                panStartX = mouse.x
-                panStartY = mouse.y
-            }
-        }
-
-        onPositionChanged: function(mouse) {
-            if (pressed && (mouse.button === Qt.MiddleButton || mouse.button === Qt.RightButton)) {
-                root.panX = lastPanX + (mouse.x - panStartX)
-                root.panY = lastPanY + (mouse.y - panStartY)
-                gridCanvas.requestPaint()
-            }
-            if (pressed && isBoxSelecting && mouse.button === Qt.LeftButton) {
-                boxSelectRect.x = Math.min(boxSelectRect.boxStartX, mouse.x)
-                boxSelectRect.y = Math.min(boxSelectRect.boxStartY, mouse.y)
-                boxSelectRect.width = Math.abs(mouse.x - boxSelectRect.boxStartX)
-                boxSelectRect.height = Math.abs(mouse.y - boxSelectRect.boxStartY)
-            }
-            if (root.connecting) {
-                root.connectCurrentX = mouse.x
-                root.connectCurrentY = mouse.y
-                rubberBand.requestPaint()
-            }
-        }
-
-        onReleased: function(mouse) {
-            if (isBoxSelecting && mouse.button === Qt.LeftButton) {
-                isBoxSelecting = false
-                boxSelectRect.boxSelectActive = false
-                if (boxSelectRect.width > 5 || boxSelectRect.height > 5) {
-                    var topLeft = root.screenToWorld(boxSelectRect.x, boxSelectRect.y)
-                    var bottomRight = root.screenToWorld(
-                        boxSelectRect.x + boxSelectRect.width,
-                        boxSelectRect.y + boxSelectRect.height)
-                    var found = root.nodesInRect(topLeft.x, topLeft.y, bottomRight.x, bottomRight.y)
-                    if (found.length > 0) {
-                        root.selectedNodeIds = found
-                        root.selectedNodeId = found[found.length - 1]
-                        nodeSelected(root.selectedNodeId)
-                    }
-                }
-            }
         }
     }
 

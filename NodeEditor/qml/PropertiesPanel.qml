@@ -10,6 +10,7 @@ Item {
     property var undoManager: null
     property string nodeId: ""
     property var nodeInfo: ({})
+    readonly property var _emptyList: []
 
     onNodeIdChanged: {
         if (nodeId && graphModel)
@@ -95,7 +96,7 @@ Item {
 
                 // Input port data
                 Repeater {
-                    model: root.nodeInfo.inputPorts || []
+                    model: root.nodeInfo.inputPorts || root._emptyList
 
                     Item {
                         id: propDelegate
@@ -142,18 +143,13 @@ Item {
                                 if (root.undoManager && propDelegate.dataOldVal !== text)
                                     root.undoManager.qmlSetNodeData(root.nodeId, modelData, propDelegate.dataOldVal, text)
                             }
-
-                            onTextChanged: {
-                                if (root.graphModel && root.nodeId)
-                                    root.graphModel.qmlSetNodeData(root.nodeId, modelData, text)
-                            }
                         }
                     }
                 }
 
                 // Output port data
                 Repeater {
-                    model: root.nodeInfo.outputPorts || []
+                    model: root.nodeInfo.outputPorts || root._emptyList
 
                     Item {
                         width: detailColumn.width

@@ -67,28 +67,39 @@ void DataFlowEngine::executeNode(const QUuid &nodeId)
     for (auto it = outputs.begin(); it != outputs.end(); ++it)
         m_model->setNodeData(nodeId, it.key(), it.value());
 
+    // Write resolved input values back so QML can display them
+    for (auto it = inputs.begin(); it != inputs.end(); ++it) {
+        QVariant current = data->data.value(it.key());
+        if (current != it.value())
+            m_model->setNodeData(nodeId, it.key(), it.value());
+    }
+
     instance->setDirty(false);
 }
 
 void DataFlowEngine::processNodeChange(const QUuid &nodeId)
 {
+    if (m_processing) return;
+    m_processing = true;
+
     if (m_model->hasCycles()) {
         emit cycleDetected();
+        m_processing = false;
         return;
     }
 
     auto sorted = m_model->topologicalSort();
 
     int startIndex = sorted.indexOf(nodeId);
-    if (startIndex < 0) return;
+    if (startIndex < 0) { m_processing = false; return; }
 
-    // Execute the changed node and all downstream nodes in topological order
     QList<QUuid> computed;
     for (int i = startIndex; i < sorted.size(); ++i) {
         executeNode(sorted[i]);
         computed.append(sorted[i]);
     }
 
+    m_processing = false;
     emit propagationComplete(computed);
 }
 
@@ -100,6 +111,7 @@ void DataFlowEngine::processAll()
     }
 
     auto sorted = m_model->topologicalSort();
+    m_processing = true;
 
     QList<QUuid> computed;
     for (const auto &id : sorted) {
@@ -107,6 +119,7 @@ void DataFlowEngine::processAll()
         computed.append(id);
     }
 
+    m_processing = false;
     emit propagationComplete(computed);
 }
 

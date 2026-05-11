@@ -30,6 +30,7 @@ private:
 
     GraphModel *m_model;
     QMap<QString, BaseNode*> m_nodeInstances;
+    bool m_processing = false;
 };
 
 } // namespace NodeEditor

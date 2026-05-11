@@ -32,6 +32,7 @@ int main(int argc, char *argv[])
 
     // Register node type metadata for QML
     NodeTypeInfo inputInfo;
+    inputInfo.inputs["input"] = PortInfo{PortType::Float, "input", QVariant(0.0)};
     inputInfo.outputs["value"] = PortInfo{PortType::Float, "value", QVariant()};
     inputInfo.displayColor = "#4CDF8B";
     inputInfo.categoryId = "Input";
@@ -62,9 +63,19 @@ int main(int argc, char *argv[])
     outputInfo.subCategory = "Debug";
     model.registerNodeType("Output", outputInfo);
 
-    // Auto-propagate when data changes
+    // Auto-propagate when data changes or nodes/edges are added
     QObject::connect(&model, &GraphModel::nodeDataChanged, [&](const QUuid &nodeId, const QString &) {
         engine.processNodeChange(nodeId);
+    });
+    QObject::connect(&model, &GraphModel::nodeAdded, [&](const QUuid &nodeId) {
+        engine.processNodeChange(nodeId);
+    });
+    QObject::connect(&model, &GraphModel::edgeAdded, [&](const QUuid &edgeId) {
+        for (const auto &e : model.edges())
+            if (e.id == edgeId) {
+                engine.processNodeChange(e.targetNodeId);
+                break;
+            }
     });
 
     UndoManager undoManager(&model);
