@@ -380,7 +380,7 @@ Item {
         property bool boxSelectActive: false
     }
 
-    // Rubber band for connection creation (straight line + arrow head)
+    // Rubber band for connection creation (bezier curve + arrow head)
     Canvas {
         id: rubberBand
         visible: root.connecting
@@ -396,14 +396,15 @@ Item {
             var ex = root.connectCurrentX
             var ey = root.connectCurrentY
 
+            var dx = Math.max(60, Math.abs(ex - sx) * 0.5)
             var angle = Math.atan2(ey - sy, ex - sx)
 
-            // Line
+            // Bezier curve
             ctx.strokeStyle = "#00B4FF"
             ctx.lineWidth = 2
             ctx.beginPath()
             ctx.moveTo(sx, sy)
-            ctx.lineTo(ex - Math.cos(angle) * 8, ey - Math.sin(angle) * 8)
+            ctx.bezierCurveTo(sx + dx, sy, ex - dx, ey, ex, ey)
             ctx.stroke()
 
             // Arrow head

@@ -27,12 +27,12 @@ Shape {
         if (isOutput) {
             var ports = info.outputPorts || []
             var idx = ports.indexOf(portName)
-            if (idx < 0) return info.y + 36
+            if (idx < 0) return info.y + 42
             var numInputs = (info.inputPorts || []).length
             if (numInputs > 0)
                 return info.y + 44 + numInputs * 22 + idx * 22
             else
-                return info.y + 36 + idx * 22
+                return info.y + 42 + idx * 22
         } else {
             var ports2 = info.inputPorts || []
             var idx2 = ports2.indexOf(portName)
@@ -54,6 +54,15 @@ Shape {
         targetY = root.portCenterY(tgtInfo, targetPort, false)
     }
 
+    function curveDX() {
+        return Math.max(60, Math.abs(targetX - sourceX) * 0.5)
+    }
+
+    // Approximate angle from source to target (good enough for arrow head)
+    function angle() {
+        return Math.atan2(targetY - sourceY, targetX - sourceX)
+    }
+
     Connections {
         target: graphModel
         function onQmlNodePositionChanged(nodeId) {
@@ -64,11 +73,7 @@ Shape {
 
     Component.onCompleted: updatePositions()
 
-    // Arrow head helper: returns the angle from source to target
-    function angle() {
-        return Math.atan2(targetY - sourceY, targetX - sourceX)
-    }
-
+    // Bézier curve line
     ShapePath {
         strokeColor: root.hovered ? "#00B4FF" : "#888888"
         strokeWidth: root.hovered ? 3 : 2
@@ -79,13 +84,17 @@ Shape {
         startX: root.sourceX
         startY: root.sourceY
 
-        PathLine {
-            x: root.targetX - Math.cos(root.angle()) * 8
-            y: root.targetY - Math.sin(root.angle()) * 8
+        PathCubic {
+            control1X: root.sourceX + root.curveDX()
+            control1Y: root.sourceY
+            control2X: root.targetX - root.curveDX()
+            control2Y: root.targetY
+            x: root.targetX
+            y: root.targetY
         }
     }
 
-    // Arrow head (filled triangle)
+    // Arrow head (filled triangle at target end)
     ShapePath {
         strokeColor: root.hovered ? "#00B4FF" : "#888888"
         strokeWidth: 1
