@@ -6,6 +6,7 @@
 #include "NodeEditor/DataFlowEngine.h"
 #include "NodeEditor/UndoManager.h"
 #include "NodeEditor/BaseNode.h"
+#include "NodeEditor/DefaultNodes.h"
 #include "DemoNodes.h"
 
 using namespace NodeEditor;
@@ -29,6 +30,9 @@ int main(int argc, char *argv[])
     BaseNode::registerType("Add", []() { return new AddNode(); });
     BaseNode::registerType("Multiply", []() { return new MultiplyNode(); });
     BaseNode::registerType("Output", []() { return new OutputNode(); });
+
+    // Register system-default node types (CanvasInput, CanvasOutput, JsonInput, CanvasNode)
+    registerDefaultNodeTypes(&model);
 
     // Register node type metadata for QML
     NodeTypeInfo inputInfo;

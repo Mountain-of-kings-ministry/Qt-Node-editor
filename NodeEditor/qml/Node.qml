@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Dialogs
 import NodeEditor
 
 Item {
@@ -187,13 +188,15 @@ Item {
             Repeater {
                 model: nodeInfo.inputPorts || []
 
-                Item {
+                delegate: Item {
                     id: inputDelegate
                     width: inputColumn.width
-                    height: 16
+                    height: isFilePathPort ? 24 : 16
 
+                    property bool isFilePathPort: modelData === "filePath" && nodeInfo.type === "JsonInput"
                     property string dataOldVal: ""
 
+                    // Hide the default port/field when using Browse button
                     Port {
                         id: portItem
                         graphModel: root.graphModel
@@ -203,6 +206,7 @@ Item {
                         portType: (nodeInfo.inputPortTypes && nodeInfo.inputPortTypes[index]) || 0
                         anchors.verticalCenter: parent.verticalCenter
                         anchors.left: parent.left
+                        visible: !isFilePathPort
                     }
 
                     Text {
@@ -212,8 +216,63 @@ Item {
                         anchors.left: portItem.right
                         anchors.leftMargin: 6
                         anchors.verticalCenter: parent.verticalCenter
+                        visible: !isFilePathPort
                     }
 
+                    // Browse button for JsonInput filePath
+                    Row {
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 4
+                        visible: isFilePathPort
+
+                        Text {
+                            id: filePathLabel
+                            text: {
+                                root._dataVersion
+                                if (!root.graphModel) return "No file"
+                                var val = root.graphModel.qmlNodeData(root.nodeId, "filePath")
+                                if (val && val !== "") {
+                                    var parts = String(val).split("/")
+                                    return parts.length > 0 ? parts[parts.length - 1] : "No file"
+                                }
+                                return "No file"
+                            }
+                            color: filePathLabel.text === "No file" ? "#666666" : "#CCCCCC"
+                            font.pixelSize: 10
+                            elide: Text.ElideLeft
+                            width: 80
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+
+                        Button {
+                            width: 24
+                            height: 20
+                            padding: 0
+                            text: "..."
+                            font.pixelSize: 10
+                            onClicked: fileDialog.open()
+
+                            FileDialog {
+                                id: fileDialog
+                                title: "Select JSON File"
+                                nameFilters: ["JSON Files (*.json)", "All Files (*)"]
+                                onAccepted: {
+                                    var file = fileDialog.selectedFile.toString()
+                                    file = file.replace(/^(file:\/{2})/, "")
+                                    if (root.graphModel) {
+                                        var oldVal = root.graphModel.qmlNodeData(root.nodeId, "filePath")
+                                        if (root.undoManager)
+                                            root.undoManager.qmlSetNodeData(root.nodeId, "filePath", oldVal, file)
+                                        else
+                                            root.graphModel.qmlSetNodeData(root.nodeId, "filePath", file)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Standard text field for normal input ports
                     TextField {
                         id: inputField
                         height: 20
@@ -230,6 +289,7 @@ Item {
                         }
                         font.pixelSize: 10
                         padding: 2
+                        visible: !isFilePathPort
 
                         text: {
                             if (!root.graphModel) return ""

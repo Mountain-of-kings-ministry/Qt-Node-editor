@@ -4,10 +4,12 @@ qt_add_library(NodeEditorCore STATIC
     src/backend/DataFlowEngine.cpp
     src/backend/UndoManager.cpp
     src/nodes/BaseNode.cpp
+    src/nodes/DefaultNodes.cpp
     include/NodeEditor/GraphModel.h
     include/NodeEditor/DataFlowEngine.h
     include/NodeEditor/UndoManager.h
     include/NodeEditor/BaseNode.h
+    include/NodeEditor/DefaultNodes.h
 )
 
 target_include_directories(NodeEditorCore PUBLIC
