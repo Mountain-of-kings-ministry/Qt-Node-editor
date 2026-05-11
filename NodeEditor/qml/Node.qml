@@ -121,8 +121,6 @@ Item {
                 var z = canvas ? canvas.zoom : 1.0
                 root.x = dragStartX + (mouse.x - mouseStartX) / z
                 root.y = dragStartY + (mouse.y - mouseStartY) / z
-                if (root.graphModel)
-                    root.graphModel.qmlSetNodePosition(root.nodeId, root.x, root.y)
             }
 
             onReleased: function(mouse) {
@@ -261,11 +259,6 @@ Item {
             }
         }
 
-        Rectangle {
-            height: 3
-            Layouts.width: parent.width
-        }
-
         Column {
             id: outputColumn
             anchors.top: inputColumn.bottom
@@ -275,6 +268,12 @@ Item {
             anchors.right: parent.right
             anchors.rightMargin: 8
             spacing: 6
+
+            Rectangle {
+                height: 10
+                width: parent.width
+                color: "transparent" // or "#00000000"
+            }
 
                 Repeater {
                 model: nodeInfo.outputPorts || []

@@ -22,6 +22,10 @@ Item {
     property real connectCurrentX: 0
     property real connectCurrentY: 0
 
+    onConnectCurrentXChanged: rubberBand.requestPaint()
+    onConnectCurrentYChanged: rubberBand.requestPaint()
+    onConnectingChanged: rubberBand.requestPaint()
+
     property string selectedNodeId: ""
     property var selectedNodeIds: []
     property string selectMode: "default"
@@ -266,7 +270,6 @@ Item {
                 root.forceActiveFocus()
 
                 if (root.connecting) {
-                    // Let node ports handle their own release
                     return
                 }
 
@@ -302,6 +305,10 @@ Item {
             }
 
             onReleased: function(mouse) {
+                if (root.connecting) {
+                    root.cancelConnection()
+                    return
+                }
                 if (deselectOverlay.isBoxSelecting) {
                     deselectOverlay.isBoxSelecting = false
                     boxSelectRect.boxSelectActive = false
@@ -446,6 +453,41 @@ Item {
             else
                 graphModel.qmlConnectPorts(connectSourceNodeId, connectSourcePort, nodeId, portName)
         }
+    }
+
+    function cancelConnection() {
+        connecting = false
+        connectSourceNodeId = ""
+        connectSourcePort = ""
+        rubberBand.requestPaint()
+    }
+
+    // Find the nearest input port to a world-space point (for connection completion)
+    function findInputPortAt(worldX, worldY) {
+        if (!graphModel) return null
+        var ids = graphModel.qmlNodeIds()
+        var closest = null
+        var closestDist = 25
+        for (var i = 0; i < ids.length; i++) {
+            var info = graphModel.qmlNodeInfo(ids[i])
+            if (!info) continue
+            var ports = info.inputPorts || []
+            var nx = info.x || 0
+            var ny = info.y || 0
+            for (var j = 0; j < ports.length; j++) {
+                // Input ports sit at x+15, y+42 + idx*22
+                var px = nx + 15
+                var py = ny + 42 + j * 22
+                var dx = worldX - px
+                var dy = worldY - py
+                var d = Math.sqrt(dx * dx + dy * dy)
+                if (d < closestDist) {
+                    closestDist = d
+                    closest = { nodeId: ids[i], portName: ports[j] }
+                }
+            }
+        }
+        return closest
     }
 
     onPanXChanged: gridCanvas.requestPaint()

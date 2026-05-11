@@ -71,7 +71,7 @@ Item {
     MouseArea {
         id: ma
         anchors.fill: parent
-        anchors.margins: -4
+        anchors.margins: -10
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
 
@@ -81,13 +81,35 @@ Item {
             if (!canvas) return
             var portCenter = root.mapToItem(canvas, width / 2, height / 2)
             canvas.startConnection(root.nodeId, root.portName, portCenter.x, portCenter.y)
+            canvas.connectCurrentX = portCenter.x
+            canvas.connectCurrentY = portCenter.y
+        }
+
+        onPositionChanged: function(mouse) {
+            var canvas = findCanvas()
+            if (!canvas || !canvas.connecting) return
+            var pt = root.mapToItem(canvas, mouse.x, mouse.y)
+            canvas.connectCurrentX = pt.x
+            canvas.connectCurrentY = pt.y
+            // requestPaint is handled by the canvas binding
         }
 
         onReleased: function(mouse) {
-            if (!root.isInput) return
             var canvas = findCanvas()
-            if (!canvas) return
-            canvas.endConnection(root.nodeId, root.portName)
+            if (!canvas || !canvas.connecting) return
+            if (root.isInput) {
+                // Release on input port completes the connection
+                canvas.endConnection(root.nodeId, root.portName)
+            } else {
+                // Output port release: find input port under cursor
+                var pt = root.mapToItem(canvas, mouse.x, mouse.y)
+                var worldPt = canvas.screenToWorld(pt.x, pt.y)
+                var hit = canvas.findInputPortAt(worldPt.x, worldPt.y)
+                if (hit)
+                    canvas.endConnection(hit.nodeId, hit.portName)
+                else
+                    canvas.cancelConnection()
+            }
         }
     }
 }
