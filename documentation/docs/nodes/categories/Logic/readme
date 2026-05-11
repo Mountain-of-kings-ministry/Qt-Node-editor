@@ -1,0 +1,54 @@
+# Logic
+
+**Color:** `#FF6B6B` | **Nodes:** 7
+
+The Logic category provides boolean operations, comparison, and state checking nodes.
+
+## Basic
+
+**Color:** `#FF6B6B`
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `logic/basic/and` | AND | a(Bool), b(Bool) | result(Bool) | Logical AND — true if both inputs are true |
+| `logic/basic/or` | OR | a(Bool), b(Bool) | result(Bool) | Logical OR — true if either input is true |
+| `logic/basic/xor` | XOR | a(Bool), b(Bool) | result(Bool) | Exclusive OR — true if inputs differ |
+| `logic/basic/not` | NOT | value(Bool) | result(Bool) | Logical NOT — inverts boolean input |
+
+### Example Uses
+
+```
+[Sensor1] [Sensor2] → [AND] → [Boolean Indicator]   // Both sensors must trigger
+[Switch A] [Switch B] → [OR] → [Gate]                // Either switch opens gate
+[Value] → [NOT] → [AND]                               // Invert then combine
+```
+
+## Compare
+
+**Color:** `#E17055`
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `logic/compare/booleanCompare` | Boolean Compare | a(Bool), b(Bool) | equal(Bool), notEqual(Bool) | Compare two booleans with dedicated outputs |
+
+### Example Uses
+
+```
+[Key Press] [Expected] → [Boolean Compare] → [Gate]   // Match against expected state
+```
+
+## Check
+
+**Color:** `#55EFC4`
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `logic/check/isTrue` | Is True | value(Bool) | result(Bool) | Returns true only if input is explicitly true |
+| `logic/check/isFalse` | Is False | value(Bool) | result(Bool) | Returns true only if input is explicitly false |
+
+### Example Uses
+
+```
+[Comparator] → [Is True] → [Display]   // Show "active" when condition met
+[Comparator] → [Is False] → [Display]   // Show "inactive" when condition not met
+```

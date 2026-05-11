@@ -55,3 +55,23 @@ Output display nodes (`output/display/*`) render their computed output visually 
 - **Image-based** (LED Matrix, Line Plot, Bar Chart, Pie Chart, Histogram, Heatmap, Progress, Gauge, Compass, Boolean): rendered QImage shown inside the node
 
 Display nodes do not show raw output values in the Properties panel — the inline preview replaces that.
+
+## Embedding as a Package
+
+`NodeEditorWorkspace` exposes three boolean properties for embedding in other projects:
+
+| Property | Default | Description |
+|---|---|---|
+| `showTopBar` | `true` | Show/hide the top toolbar |
+| `showBottomBar` | `true` | Show/hide the bottom tab bar |
+| `framelessWindow` | `false` | Remove window decorations |
+
+All keyboard shortcuts remain active regardless of bar visibility.
+
+```qml
+NodeEditorWorkspace {
+    anchors.fill: parent
+    showTopBar: false
+    showBottomBar: false
+}
+```

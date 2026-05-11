@@ -22,6 +22,8 @@
 | `Right-click edge` | Delete edge |
 | `Escape` | Close Add Node popup / Cancel selection |
 
+> All shortcuts remain active even when the top bar or bottom tab bar is hidden via `showTopBar: false` / `showBottomBar: false`.
+
 ## Mouse Controls
 
 | Action | Result |

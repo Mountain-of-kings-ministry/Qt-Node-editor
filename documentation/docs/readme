@@ -1,1 +1,10 @@
-this folder will be containing documentation of every single nodes and types and practical usage
+# Documentation
+
+- [Getting Started](getting-started.md) — Quick start guide
+- [Installation](installation.md) — Build and setup instructions
+- [Node List](node-list.md) — Complete inventory of all ~157 nodes
+- [API Reference](api-reference.md) — C++ and QML API documentation
+- [Custom Nodes](custom-nodes.md) — How to create and register custom nodes
+- [Demo](demo.md) — Example applications and usage walkthroughs
+- [Keyboard Shortcuts](keyboard-shortcuts.md) — Workspace navigation shortcuts
+- [Nodes](nodes/readme) — Per-category node documentation with inputs, outputs, and usage examples

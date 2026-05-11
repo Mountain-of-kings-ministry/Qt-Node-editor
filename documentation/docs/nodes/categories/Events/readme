@@ -1,0 +1,153 @@
+# Events
+
+**Color:** `#FDCB6E` | **Nodes:** 6
+
+The Events category provides nodes that respond to runtime events such as application start, timer ticks, key presses, and property changes.
+
+## Core
+
+**Color:** `#FDCB6E`
+
+### Begin
+
+| | |
+|---|---|
+| **Type** | `events/core/begin` |
+| **Node Name** | Begin |
+| **Description** | Fires once when the graph evaluation starts. Useful for initializing values, setting up state, or triggering an initial computation chain. |
+
+**Inputs** — none
+
+**Outputs**
+
+| Port | Type | Description |
+|---|---|---|
+| `started` | Bool | Emits `true` once on startup |
+
+**Example Usage**
+
+```
+[Begin] → [Constant] setup    // Initialize values on startup
+```
+
+### Tick
+
+| | |
+|---|---|
+| **Type** | `events/core/tick` |
+| **Node Name** | Tick |
+| **Description** | Fires every frame/update cycle. Provides delta time and total elapsed time for animation, physics, or real-time data processing. |
+
+**Inputs** — none
+
+**Outputs**
+
+| Port | Type | Description |
+|---|---|---|
+| `deltaTime` | Float | Time since last tick in seconds |
+| `elapsed` | Float | Total elapsed time since graph start |
+
+**Example Usage**
+
+```
+[Tick] → [Sine Wave] → [Gauge]          // Animate based on elapsed time
+[Tick] → [Integrator] → [Counter]       // Accumulate delta time
+```
+
+### Timer Event
+
+| | |
+|---|---|
+| **Type** | `events/core/timerEvent` |
+| **Node Name** | Timer Event |
+| **Description** | Fires at a configurable interval. Useful for periodic checks, sampling sensors, or scheduling repeated actions. |
+
+**Inputs**
+
+| Port | Type | Default | Description |
+|---|---|---|---|
+| `interval` | Float | `1.0` | Interval in seconds between firings |
+
+**Outputs**
+
+| Port | Type | Description |
+|---|---|---|
+| `fired` | Bool | Emits `true` each time the interval elapses |
+| `count` | Float | Number of times the timer has fired |
+
+**Example Usage**
+
+```
+[Timer Event] → [Read File] → [Display]     // Poll a file every 5 seconds
+   interval: 5.0
+```
+
+### Input Event
+
+| | |
+|---|---|
+| **Type** | `events/core/inputEvent` |
+| **Node Name** | Input Event |
+| **Description** | Responds to external input events (keyboard, mouse, system events) by type. |
+
+**Inputs**
+
+| Port | Type | Default | Description |
+|---|---|---|---|
+| `eventType` | String | `""` | Event type to listen for (e.g. `"keyPress"`, `"mouseClick"`) |
+
+**Outputs**
+
+| Port | Type | Description |
+|---|---|---|
+| `triggered` | Bool | Emits `true` when the event occurs |
+| `data` | String | Event payload data |
+
+### Signal Event
+
+| | |
+|---|---|
+| **Type** | `events/core/signalEvent` |
+| **Node Name** | Signal Event |
+| **Description** | Listens for a named signal from Qt's signal/slot system and fires when the signal is received. |
+
+**Inputs**
+
+| Port | Type | Default | Description |
+|---|---|---|---|
+| `signal` | String | `""` | Signal identifier to listen for |
+
+**Outputs**
+
+| Port | Type | Description |
+|---|---|---|
+| `received` | Bool | Emits `true` when signal is received |
+| `value` | Generic | Optional payload from the signal |
+
+### Property Changed
+
+| | |
+|---|---|
+| **Type** | `events/core/propertyChanged` |
+| **Node Name** | Property Changed |
+| **Description** | Monitors a named property for changes and fires when the value updates. Useful for reacting to UI state changes or external data updates. |
+
+**Inputs**
+
+| Port | Type | Default | Description |
+|---|---|---|---|
+| `property` | String | `""` | Property name to watch |
+| `value` | Generic | — | Current property value (read) |
+
+**Outputs**
+
+| Port | Type | Description |
+|---|---|---|
+| `changed` | Bool | Emits `true` when property changes |
+| `newValue` | Generic | The updated value |
+
+**Example Usage**
+
+```
+[Slider] → [Property Changed] → [Multiply] → [Display]   // React to slider changes
+```

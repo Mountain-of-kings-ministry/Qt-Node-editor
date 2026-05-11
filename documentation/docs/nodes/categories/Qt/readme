@@ -1,0 +1,59 @@
+# Qt
+
+**Color:** `#4A9EFF` | **Nodes:** 10
+
+The Qt category provides nodes for interacting with the Qt framework — connecting signals, reading/writing QObject properties, invoking methods, and responding to widget and QML events.
+
+## QObject
+
+**Color:** `#4A9EFF`
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `qt/qobject/connectSignal` | Connect Signal | sender(String), signal(String), receiver(String), slot(String) | connected(Bool) | Wire a Qt signal to a slot dynamically |
+| `qt/qobject/emitSignal` | Emit Signal | signal(String), value(Generic) | emitted(Bool) | Emit a named Qt signal with a payload |
+| `qt/qobject/setProperty` | Set Property | object(String), property(String), value(Generic) | success(Bool) | Set a QObject property by name |
+| `qt/qobject/getProperty` | Get Property | object(String), property(String) | value(Generic) | Read a QObject property by name |
+| `qt/qobject/invokeMethod` | Invoke Method | object(String), method(String), arg(Generic) | result(Generic) | Call a QObject method dynamically |
+
+### Example Uses
+
+```
+"button1" "clicked" → [Connect Signal] → [Display]    // React to button click
+"slider1" "value"  → [Get Property]   → [Number Display]  // Read slider value
+[Object] [Method] → [Invoke Method]   → [Display]     // Call a method dynamically
+```
+
+## Widgets
+
+**Color:** `#FF9F43`
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `qt/widgets/buttonClicked` | Button Clicked | text(String) | clicked(Bool) | Fires when a button with matching text is clicked |
+| `qt/widgets/sliderValue` | Slider Value | min(Float), max(Float), value(Float) | value(Float) | Read/control a slider widget |
+| `qt/widgets/textChanged` | Text Changed | text(String) | text(String) | Fires when text input changes |
+
+### Example Uses
+
+```
+"Start" → [Button Clicked] → [Gate]                   // Trigger on button press
+[0] [100] [50] → [Slider Value] → [Gauge]             // Control gauge with slider
+[Text Field] → [Text Changed] → [String Concat]       // React to text input
+```
+
+## QML
+
+**Color:** `#00CEC9`
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `qt/qml/qmlProperty` | QML Property | objectId(String), property(String) | value(Generic) | Read a property from a QML object by ID |
+| `qt/qml/qmlSignal` | QML Signal | objectId(String), signal(String) | value(Generic) | Connect to a QML signal by object ID |
+
+### Example Uses
+
+```
+"myCanvas" "width" → [QML Property] → [Number Display]   // Monitor QML canvas width
+"myButton" "clicked" → [QML Signal] → [Toggle]           // React to QML button click
+```

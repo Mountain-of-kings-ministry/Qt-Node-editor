@@ -1,0 +1,126 @@
+# Output
+
+**Color:** `#FF6B6B` | **Nodes:** 28
+
+The Output category provides nodes for visualizing, exporting, and debugging data. **Display nodes** (with `output/display/` type prefix) render their output inline inside the node body on the canvas.
+
+## Value (Inline Preview)
+
+**Colors:** `#00CEC9` / `#81ECEC` / `#00B894` / `#55EFC4`
+
+Text-based display nodes that show computed values as formatted text inside the node body.
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `output/display/number` | Number Display | value(Generic) | display(String) | Shows a numeric value with configurable precision |
+| `output/display/text` | Text Display | text(String) | display(String) | Shows a text string inline |
+| `output/display/boolean` | Boolean Indicator | value(Bool) | display(String), color(Color) | Green circle when true, gray when false |
+| `output/display/vector` | Vector Display | x(Float), y(Float), z(Float) | display(String) | Shows vector components as formatted text |
+
+### Example Uses
+
+```
+[Sensor] → [Number Display]         // Monitor a sensor value
+[Key Press] → [Boolean Indicator]   // Visualize key state
+[Position] → [Vector Display]       // Show XYZ coordinates
+```
+
+## Chart (Inline Preview)
+
+**Colors:** `#6C5CE7` / `#A29BFE` / `#E17055` / `#FDCB6E` / `#FF6B6B` / `#E17055`
+
+Image-based display nodes that render charts and plots as inline PNG previews.
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `output/display/linePlot` | Line Plot | series(String) | display(String) | Line chart from comma-separated Y values |
+| `output/display/scatterPlot` | Scatter Plot | xValues(String), yValues(String) | display(String) | Scatter plot from X/Y value pairs |
+| `output/display/barChart` | Bar Chart | values(String), labels(String) | display(String) | Vertical bar chart with optional labels |
+| `output/display/pieChart` | Pie Chart | segments(String) | display(String) | Pie/donut chart from segment values |
+| `output/display/histogram` | Histogram | data(String), bins(Int) | display(String) | Histogram distribution from raw data |
+| `output/display/heatmap` | Heatmap | data(String) | display(String) | 2D heatmap from grid data |
+
+### Example Uses
+
+```
+[CSV Parse] → [Line Plot]         // Chart CSV data over time
+[Values] [Labels] → [Bar Chart]   // Visualize categories
+[Sensor Data] → [Histogram]       // Show value distribution
+```
+
+## Matrix (Inline Preview)
+
+**Colors:** `#74B9FF` / `#0984E3`
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `output/display/matrix` | Matrix Display | rows(String) | display(String) | Displays a 2D matrix of values as a formatted grid |
+| `output/display/memory` | Memory Viewer | data(String) | display(String) | Hex dump visualization of raw data |
+
+## Utility (Inline Preview)
+
+**Colors:** `#00B894` / `#FDCB6E` / `#636E72` / `#FF6B6B`
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `output/display/progress` | Progress Bar | value(Float) | display(String) | Horizontal progress bar (0–1) |
+| `output/display/gauge` | Gauge | value(Float) | display(String) | Circular gauge visualization (0–1) |
+| `output/display/compass` | Compass | degrees(Float) | display(String) | Compass/heading indicator (0–360) |
+| `output/display/fps` | FPS Meter | *(none)* | display(String) | Real-time frames-per-second counter |
+
+### Example Uses
+
+```
+[LED Brightness] → [Progress Bar]   // Show brightness level
+[Angle Sensor]  → [Compass]         // Display heading
+[Timer]         → [FPS Meter]       // Monitor evaluation rate
+```
+
+## LED Matrix (Inline Preview)
+
+**Color:** `#00CEC9`
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `output/display/ledMatrix` | LED Matrix Display | value(Generic), width(Int), height(Int), fgColor(Color), bgColor(Color), ledSize(Float), spacing(Float) | display(String) | Renders text as a retro LED matrix display with configurable dimensions, colors, and pixel size |
+
+### Example Usage
+
+```
+[Constant] → [LED Matrix Display]   // "HELLO" on 16x8 LED grid
+   value: "HELLO", width: 16, height: 8
+```
+
+## Visual
+
+**Color:** `#E17055`
+
+Media output nodes for displaying images and video frames. These do not have inline preview.
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `output/visual/image` | Image Output | image(Image), width(Int), height(Int) | display(String) | Display an image with optional resize |
+| `output/visual/video` | Video Output | frame(Image), fps(Float) | display(String) | Output video frames at specified FPS |
+| `output/visual/viewport` | Viewport Output | frame(Image) | display(String) | Render frame to a dedicated viewport |
+| `output/visual/pixelBuffer` | Pixel Buffer Output | buffer(Image) | display(String) | Output raw pixel buffer data |
+
+## Data
+
+**Color:** `#6C5CE7`
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `output/data/fileWriter` | File Writer | path(String), content(String) | success(Bool) | Write content to a file on disk |
+| `output/data/jsonExport` | JSON Export | data(Map) | display(String) | Export a map as formatted JSON string |
+
+## Debug
+
+**Color:** `#FF6B6B`
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `output/debug/print` | Print | text(String) | *(none)* | Print text to stdout/console |
+| `output/debug/logger` | Logger | message(String), level(String) | *(none)* | Log message with severity level (`"info"`, `"warn"`, `"error"`) |
+| `output/debug/graphInspector` | Graph Inspector | data(Generic) | display(String) | Inspect graph/node data structures |
+| `output/debug/watchValue` | Watch Value | value(Generic), label(String) | display(String) | Watch a specific value with a custom label |
+| `output/debug/performance` | Performance Monitor | *(none)* | fps(Float), frameTime(Float) | Monitor FPS and evaluation performance |

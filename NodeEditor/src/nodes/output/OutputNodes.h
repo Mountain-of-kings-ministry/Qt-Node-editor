@@ -866,49 +866,90 @@ public:
     QList<PortInfo> outputSpec() const override {
         return {{PortType::String, "display", QVariant()}};
     }
-    QVariantMap compute(const QVariantMap &inputs) override {
-        int cols = qBound(1, inputs.value("width").toInt(), 64);
-        int rows = qBound(1, inputs.value("height").toInt(), 32);
-        double led = qBound(2.0, inputs.value("ledSize").toDouble(), 20.0);
-        double gap = qBound(0.0, inputs.value("spacing").toDouble(), 10.0);
-        QColor fg = inputs.value("fgColor").value<QColor>();
-        QColor bg = inputs.value("bgColor").value<QColor>();
+    QVariantMap compute(const QVariantMap &inputs) override;
+};
 
-        QVariant val = inputs.value("value");
-        QString text;
-        if (val.isValid() && !val.isNull())
-            text = val.toString();
+inline QVariantMap LEDMatrixDisplayNode::compute(const QVariantMap &inputs)
+{
+    int cols = qBound(1, inputs.value("width").toInt(), 64);
+    int rows = qBound(1, inputs.value("height").toInt(), 32);
+    double ledSize = qBound(2.0, inputs.value("ledSize").toDouble(), 20.0);
+    double gap = qBound(0.0, inputs.value("spacing").toDouble(), 10.0);
 
-        img_w = (int)(cols * (led + gap) + gap);
-        img_h = (int)(rows * (led + gap) + gap);
-        QImage pix(img_w, img_h, QImage::Format_ARGB32);
-        pix.fill(bg);
+    QColor fg = inputs.value("fgColor").value<QColor>();
+    QColor bg = inputs.value("bgColor").value<QColor>();
+    QString text = inputs.value("value").toString().trimmed();
 
-        for (int r = 0; r < rows; ++r) {
-            for (int c = 0; c < cols; ++c) {
-                double x = gap + c * (led + gap);
-                double y = gap + r * (led + gap);
-                QColor color = bg;
-                int ci = (r * cols + c) * 7 % text.size();
-                if (ci < text.size()) {
-                    QChar ch = text.at(ci);
-                    if (ch != ' ' && ch != '\0')
-                        color = fg;
-                }
-                QPainter p(&pix);
-                p.setRenderHint(QPainter::Antialiasing);
-                p.setBrush(color);
-                p.setPen(Qt::NoPen);
-                p.drawEllipse(QPointF(x + led / 2, y + led / 2), led / 2 - 0.5, led / 2 - 0.5);
-            }
-        }
+    int img_w = static_cast<int>(cols * (ledSize + gap) + gap);
+    int img_h = static_cast<int>(rows * (ledSize + gap) + gap);
+
+    QImage pix(img_w, img_h, QImage::Format_ARGB32);
+    pix.fill(bg);
+
+    if (text.isEmpty()) {
         return {{"display", imageToBase64(pix)}};
     }
 
-private:
-    int img_w = 160;
-    int img_h = 80;
-};
+    // === Text Layer ===
+    QImage textLayer(cols, rows, QImage::Format_ARGB32);
+    textLayer.fill(Qt::transparent);
+
+    QPainter tp(&textLayer);
+    tp.setRenderHint(QPainter::Antialiasing, false);
+    tp.setRenderHint(QPainter::TextAntialiasing, false);
+    tp.setRenderHint(QPainter::SmoothPixmapTransform, false);
+
+    QFont font;
+    font.setFamily("Monospace");
+    font.setStyleHint(QFont::Monospace);
+    font.setBold(true);
+    font.setPixelSize(qMax(6, rows - 1));
+
+    tp.setFont(font);
+    tp.setPen(fg);
+
+    QRect textRect(0, 0, cols, rows);
+    QFontMetrics fm(font);
+    QString displayText = text;
+
+    if (fm.horizontalAdvance(text) > cols) {
+        displayText = text.left(cols / 2);
+    }
+
+    tp.drawText(textRect, Qt::AlignCenter, displayText);
+    tp.end();
+
+    // === Render LEDs with glow ===
+    QPainter p(&pix);
+    p.setRenderHint(QPainter::Antialiasing, true);
+
+    for (int r = 0; r < rows; ++r) {
+        for (int c = 0; c < cols; ++c) {
+            double x = gap + c * (ledSize + gap);
+            double y = gap + r * (ledSize + gap);
+
+            QRgb pixel = textLayer.pixel(c, r);
+            bool isLit = (qAlpha(pixel) > 80);
+
+            QColor color = isLit ? fg : bg;
+
+            // Main LED
+            p.setBrush(color);
+            p.setPen(Qt::NoPen);
+            p.drawEllipse(QPointF(x + ledSize/2.0, y + ledSize/2.0),
+                         ledSize/2.0 - 0.5, ledSize/2.0 - 0.5);
+
+            // Glow / Highlight effect (only on lit LEDs)
+            if (isLit) {
+                p.setBrush(fg.lighter(160));        // brighter inner glow
+                p.drawEllipse(QPointF(x + ledSize/2.0, y + ledSize/2.0),
+                             ledSize/2.0 - 2.8, ledSize/2.0 - 2.8);
+            }
+        }
+    }
+
+    return {{"display", imageToBase64(pix)}};
+}
 
 // ══════════════════════════════════════════════════════════
 // Registration

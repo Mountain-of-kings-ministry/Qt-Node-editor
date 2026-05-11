@@ -1,0 +1,32 @@
+# Node Documentation
+
+This directory contains detailed documentation for every node category in the NodeEditor.
+
+## Structure
+
+```
+nodes/
+├── categories/
+│   ├── Input/          readme     — File input nodes
+│   ├── SubGraph/       readme     — Nested graph containers
+│   ├── System/         readme     — OS, time, clipboard
+│   ├── Math/           readme     — Arithmetic, trig, vectors, random
+│   ├── Color/          readme     — Color creation, manipulation, palettes
+│   ├── Data/           readme     — JSON, serialization, file I/O
+│   ├── Logic/          readme     — Boolean operations, comparison
+│   ├── Events/         readme     — Begin, tick, timer, signals
+│   ├── Generators/     readme     — Waveforms, noise, camera
+│   ├── Output/         readme     — Display, charts, debug, export
+│   ├── Qt/             readme     — QObject, widgets, QML bridge
+│   └── Utility/        readme     — Flow, value, collections, strings, hash
+└── etc/                readme     — Stub/planned categories
+    ├── cutome-node/    (template)  — Custom node documentation (user-created)
+    └── engine/         (template)  — Engine documentation (user-created)
+```
+
+Each category `readme` contains:
+- **Category overview** with color and node count
+- **Subcategory breakdown** with color
+- **Node reference table** with type ID, class name, inputs, outputs
+- **Example usage** showing typical graph connections
+- **Inline preview notes** for display nodes

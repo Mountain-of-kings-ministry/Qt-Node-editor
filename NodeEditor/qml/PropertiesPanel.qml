@@ -19,9 +19,9 @@ Item {
             nodeInfo = graphModel.qmlNodeInfo(nodeId)
         else
             nodeInfo = ({})
-        _isDisplayNode = nodeInfo && nodeInfo.type && (
+        _isDisplayNode = !!(nodeInfo && nodeInfo.type && (
             nodeInfo.type.indexOf("output/display/") === 0 ||
-            nodeInfo.type.indexOf("output/visual/") === 0)
+            nodeInfo.type.indexOf("output/visual/") === 0))
     }
 
     Connections {

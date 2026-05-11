@@ -1,0 +1,78 @@
+# Color
+
+**Color:** `#A29BFE` | **Nodes:** 16
+
+The Color category provides nodes for creating, manipulating, converting, and generating color palettes.
+
+## Basics
+
+**Color:** `#A29BFE`
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `color/basics/rgb` | RGB Color | r(Float), g(Float), b(Float), a(Float) | color(Color) | Create color from RGBA components (0–1) |
+| `color/basics/hsv` | HSV Color | h(Float), s(Float), v(Float), a(Float) | color(Color) | Create color from HSVA components |
+| `color/basics/hex` | Hex Color | hex(String) | color(Color) | Create color from hex string (e.g. `"#FF6B6B"`) |
+| `color/basics/fromString` | Color From String | name(String) | color(Color) | Parse named color (e.g. `"red"`, `"steelblue"`) |
+
+### Example Uses
+
+```
+[R] [G] [B] [A] → [RGB Color] → [Display]     // Build a color from slider values
+"#FF6B6B"       → [Hex Color] → [Invert]       // Parse hex, then manipulate
+```
+
+## Manipulation
+
+**Color:** `#6C5CE7`
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `color/manipulation/blend` | Blend Colors | a(Color), b(Color), t(Float) | result(Color) | Blend between two colors |
+| `color/manipulation/multiply` | Multiply Color | color(Color), factor(Float) | result(Color) | Multiply color by factor |
+| `color/manipulation/invert` | Invert | color(Color) | result(Color) | Invert color (1 - each channel) |
+| `color/manipulation/saturation` | Saturation | color(Color), factor(Float) | result(Color) | Adjust saturation |
+| `color/manipulation/brightness` | Brightness | color(Color), factor(Float) | result(Color) | Adjust brightness |
+| `color/manipulation/contrast` | Contrast | color(Color), amount(Float) | result(Color) | Adjust contrast |
+
+### Example Uses
+
+```
+[Base] [Target] → [Blend Colors] → [LED Matrix]   // Animate color transition
+[Color] → [Invert] → [Background]                  // Generate complementary bg
+[Color] → [Saturation] → [Display]                 // Desaturate for UI element
+```
+
+## Conversion
+
+**Color:** `#F0DB4F`
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `color/conversion/rgbToHsv` | RGB to HSV | color(Color) | h(Float), s(Float), v(Float) | Decompose RGB → HSV components |
+| `color/conversion/hsvToRgb` | HSV to RGB | h(Float), s(Float), v(Float) | color(Color) | Compose HSV → RGB color |
+| `color/conversion/rgbToHex` | RGB to HEX | color(Color) | hex(String) | Convert color to hex string |
+| `color/conversion/hexToRgb` | HEX to RGB | hex(String) | color(Color) | Parse hex string to color |
+
+### Example Uses
+
+```
+[Color] → [RGB to HEX] → [Text Display]    // Show color as hex code
+[H] [S] [V] → [HSV to RGB] → [LED Matrix]  // Generate color from HSV sliders
+```
+
+## Palette
+
+**Color:** `#A29BFE`
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `color/palette/gradient` | Gradient | from(Color), to(Color), t(Float) | color(Color) | Sample a gradient between two colors |
+| `color/palette/generator` | Palette Generator | base(Color), count(Int) | palette(Array) | Generate harmonious palette from base color |
+
+### Example Uses
+
+```
+[Red] [Blue] [t] → [Gradient] → [Display]       // Smooth color interpolation
+[Base] → [Palette Generator] → [Bar Chart]       // Visualize generated colors
+```

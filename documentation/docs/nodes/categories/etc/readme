@@ -1,0 +1,57 @@
+# Audio
+
+**Status:** ⏳ Planned (not yet implemented)
+
+Audio nodes will require **Qt Multimedia** module.
+
+### Planned Nodes
+
+ADC Input, Audio File Player, Audio Stream, Envelope Generator, FFT Analyzer, MIDI Input, MIDI Output, Mixer, Oscilloscope, Sampler, Spectrogram, Volume Control, Waveform Generator
+
+---
+
+# Device
+
+**Status:** ⏳ Planned (not yet implemented)
+
+Device nodes will require serial, MIDI, OSC, DMX, or GPIO libraries.
+
+### Planned Nodes
+
+Serial Read, Serial Write, GPIO Read, GPIO Write, PWM Output, I2C Read, I2C Write, MIDI Note On, MIDI CC, OSC Receive, OSC Send, DMX Channel, Joystick Input, Gamepad State, Sensor Read
+
+---
+
+# Network
+
+**Status:** ⏳ Planned (not yet implemented)
+
+Network nodes will require **Qt Network** module.
+
+### Planned Nodes
+
+HTTP Get, HTTP Post, WebSocket Client, WebSocket Server, TCP Client, TCP Server, UDP Send, UDP Receive, MQTT Publish, MQTT Subscribe, REST API Call, Download File
+
+---
+
+# Script
+
+**Status:** ⏳ Planned (not yet implemented)
+
+Script nodes will require a scripting backend (JavaScript, Python, Lua, or similar).
+
+### Planned Nodes
+
+JavaScript Evaluate, Python Evaluate, Lua Script, Expression Evaluator, Custom Function, Script Editor
+
+---
+
+# Video
+
+**Status:** ⏳ Planned (not yet implemented)
+
+Video nodes will require **Qt Multimedia** or **FFmpeg**.
+
+### Planned Nodes
+
+Video File Player, Video Capture, Video Writer, Frame Extractor, Motion Detection, Color Key, Chroma Key, Video Overlay, Transcode, Thumbnail Generator, Video Stream

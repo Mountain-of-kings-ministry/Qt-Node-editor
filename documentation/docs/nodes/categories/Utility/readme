@@ -1,0 +1,106 @@
+# Utility
+
+**Color:** `#00B894` | **Nodes:** 26
+
+The Utility category provides general-purpose nodes for flow control, value management, collection operations, string manipulation, and hashing.
+
+## Flow
+
+**Color:** `#55EFC4`
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `utility/flow/sequence` | Sequence | input(Float) | a(Float), b(Float), c(Float) | Distribute input across three output ports |
+| `utility/flow/branch` | Branch | condition(Bool), trueValue(Generic), falseValue(Generic) | result(Generic) | If/else: returns one of two values based on condition |
+| `utility/flow/switch` | Switch | index(Int), case0(Generic), case1(Generic), default(Generic) | result(Generic) | Multi-way switch: selects output by index |
+| `utility/flow/gate` | Gate | input(Generic), open(Bool) | output(Generic) | Passes input through only when `open` is true |
+| `utility/flow/delay` | Delay | input(Generic), seconds(Float) | output(Generic) | Delays the input value by a number of seconds |
+| `utility/flow/timer` | Timer | interval(Float) | tick(Bool), elapsed(Float) | Fires `tick` at the given interval, tracks elapsed time |
+
+### Example Uses
+
+```
+[Condition] → [Branch] → [Path A] [Path B]      // Route data based on condition
+[Sensor] [Gate Open] → [Gate] → [Display]       // Enable/disable data flow
+[Input] [2.0] → [Delay] → [Display]             // Show value after 2 seconds
+```
+
+## Value
+
+**Color:** `#00B894`
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `utility/value/reroute` | Reroute | input(Generic) | output(Generic) | Pass-through node for organizing graph layout |
+| `utility/value/cache` | Cache | input(Generic), update(Bool) | output(Generic) | Holds last value; updates only when `update` is true |
+| `utility/value/constant` | Constant | value(Generic) | output(Generic) | Emits a fixed value for use elsewhere in the graph |
+| `utility/value/debugPrint` | Debug Print | value(Generic), label(String) | output(Generic) | Prints value to console with an optional label; passes value through |
+| `utility/value/watch` | Watch | value(Generic) | output(Generic) | Monitors a value and emits updates; passes through |
+| `utility/value/typeConvert` | Type Convert | input(Generic), targetType(String) | output(Generic) | Converts between types (int, float, string, bool) |
+
+### Example Uses
+
+```
+[Constant] → [Multiply] → [Display]              // Use a fixed multiplier
+[Value] "label" → [Debug Print] → [Display]      // Debug while preserving flow
+[String] "int" → [Type Convert] → [Number Display]
+```
+
+## Collections
+
+**Color:** `#00CEC9`
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `utility/collections/makeArray` | Make Array | item0(Generic), item1(Generic), item2(Generic) | array(Array) | Create an array from up to 3 items |
+| `utility/collections/appendArray` | Append Array | array(Array), item(Generic) | result(Array) | Append an item to an array |
+| `utility/collections/removeArrayItem` | Remove Array Item | array(Array), index(Int) | result(Array) | Remove an item from an array by index |
+| `utility/collections/count` | Count | array(Array) | length(Int) | Get the length of an array |
+| `utility/collections/contains` | Contains | array(Array), item(Generic) | contains(Bool) | Check if array contains an item |
+
+### Example Uses
+
+```
+[Item1] [Item2] → [Make Array] → [Bar Chart]     // Create and chart data
+[Array] [Index] → [Remove Array Item] → [Count]   // Remove then count
+[Array] [Item] → [Contains] → [Boolean Indicator]  // Check membership
+```
+
+## Strings
+
+**Color:** `#81ECEC`
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `utility/strings/concat` | Concat | a(String), b(String) | result(String) | Concatenate two strings |
+| `utility/strings/split` | Split | string(String), separator(String) | result(Array) | Split string by separator into an array |
+| `utility/strings/replace` | Replace | string(String), from(String), to(String) | result(String) | Replace all occurrences of `from` with `to` |
+| `utility/strings/regex` | Regex | string(String), pattern(String) | match(Bool), captured(String) | Test string against regex; capture first match |
+| `utility/strings/toUpper` | To Upper | string(String) | result(String) | Convert string to uppercase |
+| `utility/strings/toLower` | To Lower | string(String) | result(String) | Convert string to lowercase |
+
+### Example Uses
+
+```
+[First] [Last] → [Concat] → [Text Display]       // Combine strings
+"a,b,c" "," → [Split] → [Make Array]              // Parse CSV
+"Hello" → [To Upper] → [Text Display]             // "HELLO"
+[String] [Pattern] → [Regex] → [Boolean Indicator] // Pattern match test
+```
+
+## UUID / Hash
+
+**Color:** `#636E72`
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `utility/hash/uuidGenerate` | UUID Generate | *(none)* | uuid(String) | Generate a random UUID (v4) |
+| `utility/hash/md5` | MD5 | data(String) | hash(String) | Compute MD5 hash of input data |
+| `utility/hash/sha256` | SHA256 | data(String) | hash(String) | Compute SHA-256 hash of input data |
+
+### Example Uses
+
+```
+[UUID Generate] → [Text Display]                  // Create a unique identifier
+[Data] → [SHA256] → [Text Display]               // Hash for verification
+```

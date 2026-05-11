@@ -14,9 +14,18 @@ Item {
     readonly property var effectiveGraphModel: activeTab ? activeTab.graphModel : null
     readonly property var effectiveUndoManager: activeTab ? activeTab.undoManager : null
 
+    onFramelessWindowChanged: {
+        if (root.framelessWindow && root.window)
+            root.window.flags = Qt.Window | Qt.FramelessWindowHint
+    }
+
     property real defaultZoom: 1.0
 
     property alias canvas: canvasItem
+
+    property bool showTopBar: true
+    property bool showBottomBar: true
+    property bool framelessWindow: false
 
     signal nodeSelected(string nodeId)
     signal nodeDeselected()
@@ -45,7 +54,8 @@ Item {
 
         Rectangle {
             Layout.fillWidth: true
-            height: 36
+            height: root.showTopBar ? 36 : 0
+            visible: root.showTopBar
             color: "#2A2A2A"
             z: 10
 
@@ -256,7 +266,8 @@ Item {
         // ── Bottom Bar ──────────────────────────────────────────
         Rectangle {
             Layout.fillWidth: true
-            height: 28
+            height: root.showBottomBar ? 28 : 0
+            visible: root.showBottomBar
             color: "#252525"
             z: 10
 
@@ -467,10 +478,10 @@ Item {
         id: propertiesPanel
         width: 220
         anchors.top: parent.top
-        anchors.topMargin: 36
+        anchors.topMargin: root.showTopBar ? 36 : 0
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: 28
+        anchors.bottomMargin: root.showBottomBar ? 28 : 0
         color: "#252525"
         visible: root.selectedNodeId !== ""
 

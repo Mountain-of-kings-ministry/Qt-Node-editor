@@ -1,0 +1,115 @@
+# System
+
+**Color:** `#636E72` | **Nodes:** 5
+
+The System category provides nodes that interact with the operating system and runtime environment.
+
+## Info
+
+### Current Time
+
+| | |
+|---|---|
+| **Type** | `system/info/currentTime` |
+| **Node Name** | Current Time |
+| **Description** | Outputs the current system time as a formatted string and a numeric Unix timestamp. No inputs required. |
+
+**Inputs** — none
+
+**Outputs**
+
+| Port | Type | Description |
+|---|---|---|
+| `time` | String | Formatted time string (e.g., `"2026-05-11 14:30:00"`) |
+| `timestamp` | Float | Unix timestamp in seconds since epoch |
+
+**Example Usage**
+
+```
+[Current Time] → [Number Display]  (timestamp)
+             → [Text Display]      (formatted time)
+```
+
+### Environment Variable
+
+| | |
+|---|---|
+| **Type** | `system/info/envVar` |
+| **Node Name** | Environment Variable |
+| **Description** | Reads the value of a system environment variable by name. |
+
+**Inputs**
+
+| Port | Type | Default | Description |
+|---|---|---|---|
+| `name` | String | `""` | Name of the environment variable (e.g., `"HOME"`, `"PATH"`) |
+
+**Outputs**
+
+| Port | Type | Description |
+|---|---|---|
+| `value` | String | Value of the environment variable, or empty if not found |
+
+### OS Info
+
+| | |
+|---|---|
+| **Type** | `system/info/osInfo` |
+| **Node Name** | OS Info |
+| **Description** | Reports the operating system name, kernel version, and architecture. No inputs required. |
+
+**Inputs** — none
+
+**Outputs**
+
+| Port | Type | Description |
+|---|---|---|
+| `os` | String | OS name (e.g., `"Linux"`, `"Windows"`, `"macOS"`) |
+| `kernel` | String | Kernel version string |
+| `architecture` | String | CPU architecture (e.g., `"x86_64"`, `"arm64"`) |
+
+## I/O
+
+### Clipboard
+
+| | |
+|---|---|
+| **Type** | `system/io/clipboard` |
+| **Node Name** | Clipboard |
+| **Description** | Reads or writes the system clipboard. Set `set` to `true` to write the provided `text`. Reads clipboard contents when `set` is `false`. |
+
+**Inputs**
+
+| Port | Type | Default | Description |
+|---|---|---|---|
+| `text` | String | `""` | Text to write to clipboard when `set` is true |
+| `set` | Bool | `false` | If true, writes `text` to clipboard; if false, reads clipboard |
+
+**Outputs**
+
+| Port | Type | Description |
+|---|---|---|
+| `text` | String | Current clipboard contents |
+
+## Process
+
+### Process Execute
+
+| | |
+|---|---|
+| **Type** | `system/process/execute` |
+| **Node Name** | Process Execute |
+| **Description** | Executes a system command and captures its output. Useful for running shell commands, scripts, or other programs from within the graph. |
+
+**Inputs**
+
+| Port | Type | Default | Description |
+|---|---|---|---|
+| `command` | String | `""` | Command to execute (e.g., `"ls -la"`, `"echo hello"`) |
+
+**Outputs**
+
+| Port | Type | Description |
+|---|---|---|
+| `output` | String | Standard output from the command |
+| `success` | Bool | Whether the command exited successfully (exit code 0) |

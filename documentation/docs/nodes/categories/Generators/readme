@@ -1,0 +1,145 @@
+# Generators
+
+**Color:** `#55EFC4` | **Nodes:** 5
+
+The Generators category provides signal generators, noise functions, color gradients, and media input nodes.
+
+## Wave
+
+**Color:** `#55EFC4`
+
+### Sine Wave
+
+| | |
+|---|---|
+| **Type** | `generators/wave/sine` |
+| **Node Name** | Sine Wave |
+| **Description** | Generates a sine wave oscillation. Accepts frequency, amplitude, phase, and time inputs for full control. |
+
+**Inputs**
+
+| Port | Type | Default | Description |
+|---|---|---|---|
+| `frequency` | Float | `1.0` | Oscillation frequency in Hz |
+| `amplitude` | Float | `1.0` | Peak amplitude |
+| `phase` | Float | `0.0` | Phase offset in radians |
+| `time` | Float | `0.0` | Time value (connect Tick.elapsed for animation) |
+
+**Outputs**
+
+| Port | Type | Description |
+|---|---|---|
+| `value` | Float | sin(time × frequency × 2π + phase) × amplitude |
+
+**Example Usage**
+
+```
+[Tick] → [Sine Wave] → [Multiply] → [Gauge]   // Animate gauge with oscillation
+[Constant] → [Sine Wave] → [Number Display]    // Test with static time
+```
+
+### Noise Generator
+
+| | |
+|---|---|
+| **Type** | `generators/wave/noise` |
+| **Node Name** | Noise Generator |
+| **Description** | Generates Perlin/simplex noise values. Useful for organic movement, terrain generation, or procedural textures. |
+
+**Inputs**
+
+| Port | Type | Default | Description |
+|---|---|---|---|
+| `seed` | Float | `0.0` | Noise seed for deterministic output |
+
+**Outputs**
+
+| Port | Type | Description |
+|---|---|---|
+| `value` | Float | Noise value at the given seed |
+
+**Example Usage**
+
+```
+[Random Seed] → [Noise Generator] → [Color Mixer]   // Organic color variation
+```
+
+### Oscillator
+
+| | |
+|---|---|
+| **Type** | `generators/wave/oscillator` |
+| **Node Name** | Oscillator |
+| **Description** | Multi-waveform oscillator supporting sine, square, triangle, and sawtooth shapes. |
+
+**Inputs**
+
+| Port | Type | Default | Description |
+|---|---|---|---|
+| `frequency` | Float | `1.0` | Oscillation frequency in Hz |
+| `amplitude` | Float | `1.0` | Peak amplitude |
+| `time` | Float | `0.0` | Time value |
+| `type` | String | `"sine"` | Waveform type: `"sine"`, `"square"`, `"triangle"`, `"sawtooth"` |
+
+**Outputs**
+
+| Port | Type | Description |
+|---|---|---|
+| `value` | Float | Oscillator output |
+
+**Example Usage**
+
+```
+[Tick] → [Oscillator] → [Bar Chart]      // Visualize waveform
+   type: "square", frequency: 2.0
+```
+
+## Color
+
+**Color:** `#A29BFE`
+
+### Gradient Generator
+
+| | |
+|---|---|
+| **Type** | `generators/color/gradient` |
+| **Node Name** | Gradient Generator |
+| **Description** | Generates a color gradient between two colors at a given interpolation point. Equivalent to blending colors. |
+
+**Inputs**
+
+| Port | Type | Default | Description |
+|---|---|---|---|
+| `from` | Color | `#000000` | Start color |
+| `to` | Color | `#FFFFFF` | End color |
+| `t` | Float | `0.5` | Interpolation point (0–1) |
+
+**Outputs**
+
+| Port | Type | Description |
+|---|---|---|
+| `color` | Color | Interpolated color at `t` |
+
+## Media
+
+**Color:** `#00CEC9`
+
+### Camera Feed
+
+| | |
+|---|---|
+| **Type** | `generators/media/camera` |
+| **Node Name** | Camera Feed |
+| **Description** | Captures frames from a camera device. Outputs each frame as an Image that can be processed or displayed. |
+
+**Inputs**
+
+| Port | Type | Default | Description |
+|---|---|---|---|
+| `deviceId` | Int | `0` | Camera device index |
+
+**Outputs**
+
+| Port | Type | Description |
+|---|---|---|
+| `frame` | Image | Captured video frame |

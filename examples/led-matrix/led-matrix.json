@@ -1,1 +1,27 @@
-{"nodes":[{"id":"src","type":"utility/value/constant","x":50,"y":200,"data":{"value":"HELLO LED"}},{"id":"led","type":"output/display/ledMatrix","x":350,"y":180,"data":{}}],"edges":[{"id":"e1","sourceNodeId":"src","sourcePort":"output","targetNodeId":"led","targetPort":"value"}]}
+{
+  "nodes": [
+    {
+      "id": "src",
+      "type": "utility/value/constant",
+      "x": 50,
+      "y": 200,
+      "data": { "value": "HELLO LED" }
+    },
+    {
+      "id": "led",
+      "type": "output/display/ledMatrix",
+      "x": 350,
+      "y": 180,
+      "data": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "sourceNodeId": "src",
+      "sourcePort": "output",
+      "targetNodeId": "led",
+      "targetPort": "value"
+    }
+  ]
+}

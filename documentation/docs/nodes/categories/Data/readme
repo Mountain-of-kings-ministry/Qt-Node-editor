@@ -1,0 +1,56 @@
+# Data
+
+**Color:** `#6C5CE7` | **Nodes:** 9
+
+The Data category provides nodes for parsing, serializing, and reading/writing structured data.
+
+## JSON
+
+**Color:** `#6C5CE7`
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `data/json/parse` | Parse JSON | json(String) | object(JSON), error(String) | Parse a JSON string into an object |
+| `data/json/get` | JSON Get | object(JSON), key(String) | value(Generic) | Extract a value from a JSON object by key |
+| `data/json/set` | JSON Set | object(JSON), key(String), value(Generic) | result(JSON) | Set a value in a JSON object by key |
+| `data/json/array` | JSON Array | items(Array) | json(JSON) | Convert an array to a JSON array |
+
+### Example Uses
+
+```
+API Response → [Parse JSON] → [JSON Get] → [Display]   // Extract field from JSON
+[Object] [Key] [Value] → [JSON Set] → [File Writer]     // Modify and save JSON
+```
+
+## Serialization
+
+**Color:** `#A29BFE`
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `data/serialization/serialize` | Serialize Object | object(Generic) | json(String) | Convert any object to its JSON string representation |
+| `data/serialization/deserialize` | Deserialize Object | json(String) | object(Map) | Parse JSON string back into a map object |
+
+### Example Uses
+
+```
+[Node data] → [Serialize Object] → [File Writer]     // Export graph data as JSON
+[File Reader] → [Deserialize Object] → [JSON Get]     // Load and query data
+```
+
+## File I/O
+
+**Color:** `#00CEC9`
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `data/file/read` | Read File | path(String) | content(String), success(Bool) | Read file contents from disk |
+| `data/file/write` | Write File | path(String), content(String) | success(Bool) | Write content to a file on disk |
+| `data/file/csvParse` | CSV Parse | csv(String), separator(String) | rows(Array) | Parse CSV text into an array of rows |
+
+### Example Uses
+
+```
+"data.csv" → [Read File] → [CSV Parse] → [Bar Chart]   // Load CSV and chart it
+[Content] [Path] → [Write File] → [Boolean Indicator]    // Save file / check success
+```

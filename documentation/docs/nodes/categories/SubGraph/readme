@@ -1,0 +1,76 @@
+# SubGraph
+
+**Color:** `#6C5CE7` | **Nodes:** 3
+
+The SubGraph category provides nodes for creating reusable sub-graphs and interfacing between nested graph hierarchies.
+
+## Interface
+
+### Canvas Input
+
+| | |
+|---|---|
+| **Type** | `CanvasInput` |
+| **Node Name** | Canvas Input |
+| **Description** | An entry point into a sub-graph. Passes an external value into the nested graph for processing. |
+
+**Inputs**
+
+| Port | Type | Default | Description |
+|---|---|---|---|
+| `value` | Generic | — | The value to pass into the sub-graph |
+
+**Outputs**
+
+| Port | Type | Description |
+|---|---|---|
+| `value` | Generic | Same value, available inside the sub-graph |
+
+### Canvas Output
+
+| | |
+|---|---|
+| **Type** | `CanvasOutput` |
+| **Node Name** | Canvas Output |
+| **Description** | An exit point from a sub-graph. Passes a computed value back out of the nested graph. |
+
+**Inputs**
+
+| Port | Type | Default | Description |
+|---|---|---|---|
+| `value` | Generic | — | The value to pass out of the sub-graph |
+
+**Outputs**
+
+| Port | Type | Description |
+|---|---|---|
+| `value` | Generic | Same value, available outside the sub-graph |
+
+## Container
+
+### Canvas Node
+
+| | |
+|---|---|
+| **Type** | `CanvasNode` |
+| **Node Name** | Canvas Node |
+| **Description** | Loads a sub-graph from a file and treats it as a single node. The sub-graph can define its own inputs and outputs. |
+
+**Inputs**
+
+| Port | Type | Default | Description |
+|---|---|---|---|
+| `filePath` | String | `""` | Path to the sub-graph JSON file |
+
+**Outputs**
+
+| Port | Type | Description |
+|---|---|---|
+| `result` | Generic | The output produced by the sub-graph |
+
+**Example Usage**
+
+```
+[Canvas Node] → [process results]
+   filePath: "subgraphs/calculator.json"
+```

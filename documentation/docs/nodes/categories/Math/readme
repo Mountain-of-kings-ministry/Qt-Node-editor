@@ -1,0 +1,126 @@
+# Math
+
+**Color:** `#FF9F43` | **Nodes:** 41
+
+The Math category provides arithmetic, comparison, trigonometric, vector, and random-value nodes.
+
+## Basic Operations
+
+**Color:** `#FF9F43`
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `math/basic/add` | Add | a(Float), b(Float) | result(Float) | a + b |
+| `math/basic/subtract` | Subtract | a(Float), b(Float) | result(Float) | a - b |
+| `math/basic/multiply` | Multiply | a(Float), b(Float) | result(Float) | a × b |
+| `math/basic/divide` | Divide | a(Float), b(Float) | result(Float) | a ÷ b |
+| `math/basic/modulo` | Modulo | a(Float), b(Float) | result(Float) | a % b |
+| `math/basic/power` | Power | base(Float), exponent(Float) | result(Float) | base ^ exponent |
+| `math/basic/squareRoot` | Square Root | value(Float) | result(Float) | √value |
+| `math/basic/absolute` | Absolute | value(Float) | result(Float) | \|value\| |
+| `math/basic/negate` | Negate | value(Float) | result(Float) | -value |
+| `math/basic/clamp` | Clamp | value(Float), min(Float), max(Float) | result(Float) | Clamp value to [min, max] |
+| `math/basic/remap` | Remap | input, inMin, inMax, outMin, outMax | result(Float) | Remap from one range to another |
+| `math/basic/lerp` | Lerp | a(Float), b(Float), t(Float) | result(Float) | Linear interpolate between a and b |
+| `math/basic/smoothstep` | Smoothstep | edge0(Float), edge1(Float), x(Float) | result(Float) | Hermite interpolation between edges |
+| `math/basic/round` | Round | value(Float) | result(Float) | Round to nearest integer |
+| `math/basic/floor` | Floor | value(Float) | result(Float) | Round down |
+| `math/basic/ceil` | Ceil | value(Float) | result(Float) | Round up |
+| `math/basic/fract` | Fract | value(Float) | result(Float) | Fractional part |
+| `math/basic/sign` | Sign | value(Float) | result(Float) | -1, 0, or 1 |
+| `math/basic/normalize` | Normalize | vector(Vec3) | result(Vec3) | Normalize vector to unit length |
+
+### Example Uses
+
+```
+Sensor → [Clamp] → [Display]        // Clamp sensor reading to valid range
+Time   → [Lerp]  → [Color Mixer]   // Fade between two colors over time
+Value  → [Remap] → [Gauge]         // Map 0-100% to gauge angle
+```
+
+## Comparison
+
+**Color:** `#F0DB4F`
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `math/compare/equal` | Equal | a(Float), b(Float) | result(Bool) | a == b |
+| `math/compare/notEqual` | Not Equal | a(Float), b(Float) | result(Bool) | a != b |
+| `math/compare/greaterThan` | Greater Than | a(Float), b(Float) | result(Bool) | a > b |
+| `math/compare/lessThan` | Less Than | a(Float), b(Float) | result(Bool) | a < b |
+| `math/compare/greaterEqual` | Greater Equal | a(Float), b(Float) | result(Bool) | a >= b |
+| `math/compare/lessEqual` | Less Equal | a(Float), b(Float) | result(Bool) | a <= b |
+| `math/compare/compare` | Compare | a(Float), b(Float) | result(Int) | -1, 0, 1 |
+| `math/compare/clamp` | Clamp | value(Float), min(Float), max(Float) | result(Float) | Clamp value to [min, max] |
+| `math/compare/min` | Min | a(Float), b(Float) | result(Float) | Minimum of a and b |
+| `math/compare/max` | Max | a(Float), b(Float) | result(Float) | Maximum of a and b |
+| `math/compare/average` | Average | a(Float), b(Float) | result(Float) | (a + b) / 2 |
+| `math/compare/sum` | Sum | a(Float), b(Float) | result(Float) | a + b |
+
+### Example Uses
+
+```
+Threshold → [Greater Than] → [Boolean Indicator]  // Alert when value exceeds limit
+[A] [B]   → [Max]         → [Display]             // Pick the larger of two values
+```
+
+## Trigonometry
+
+**Color:** `#FDCB6E`
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `math/trig/sin` | Sin | radians(Float) | result(Float) | Sine |
+| `math/trig/cos` | Cos | radians(Float) | result(Float) | Cosine |
+| `math/trig/tan` | Tan | radians(Float) | result(Float) | Tangent |
+| `math/trig/asin` | ASin | value(Float) | result(Float) | Arc sine |
+| `math/trig/acos` | ACos | value(Float) | result(Float) | Arc cosine |
+| `math/trig/atan` | ATan | y(Float), x(Float) | result(Float) | Arc tangent (y/x) |
+| `math/trig/degToRad` | Deg to Rad | degrees(Float) | result(Float) | Convert degrees to radians |
+| `math/trig/radToDeg` | Rad to Deg | radians(Float) | result(Float) | Convert radians to degrees |
+
+### Example Uses
+
+```
+Time → [Sin] → [Multiply] → [Gauge]     // Oscillate a gauge needle
+Angle → [Deg to Rad] → [Sin] → [...]    // Convert degrees before trig
+```
+
+## Vector
+
+**Color:** `#00CEC9`
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `math/vector/vec2` | Vec2 | x(Float), y(Float) | vec2(Vec2) | Create 2D vector |
+| `math/vector/vec3` | Vec3 | x(Float), y(Float), z(Float) | vec3(Vec3) | Create 3D vector |
+| `math/vector/vec4` | Vec4 | x(Float), y(Float), z(Float), w(Float) | vec4(Vec4) | Create 4D vector |
+| `math/vector/dotProduct` | Dot Product | a(Vec3), b(Vec3) | result(Float) | Dot product a·b |
+| `math/vector/crossProduct` | Cross Product | a(Vec3), b(Vec3) | result(Vec3) | Cross product a×b |
+| `math/vector/length` | Length | vector(Vec3) | result(Float) | Magnitude of vector |
+| `math/vector/distance` | Distance | a(Vec3), b(Vec3) | result(Float) | Distance between a and b |
+
+### Example Uses
+
+```
+[X] [Y] [Z] → [Vec3] → [Length] → [Display]  // Compute vector magnitude
+[PosA] [PosB] → [Distance] → [Display]         // Euclidean distance
+```
+
+## Random
+
+**Color:** `#6C5CE7`
+
+| Type | Node Name | Inputs | Outputs | Description |
+|---|---|---|---|---|
+| `math/random/float` | Random Float | min(Float), max(Float) | result(Float) | Random float in [min, max] |
+| `math/random/integer` | Random Integer | min(Int), max(Int) | result(Int) | Random integer in [min, max] |
+| `math/random/noise` | Noise | x(Float) | result(Float) | Perlin-style noise value |
+| `math/random/seedRandom` | Seed Random | seed(Int), min(Float), max(Float) | result(Float) | Seeded deterministic random |
+
+### Example Uses
+
+```
+[Random Float] → [Display]     // Random value each evaluation
+[Seed Random]  → [Color Mix]   // Deterministic color from seed
+```

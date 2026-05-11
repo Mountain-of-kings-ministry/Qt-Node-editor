@@ -96,6 +96,20 @@ Executes simple stack-based scripts written in JSON (push, add, mul, sub, div, d
 8. Right-click a connected edge to disconnect
 9. Press **F** to fit all nodes into view
 
+## Embedding Configuration
+
+When using `NodeEditorWorkspace` in another project, you can hide UI elements:
+
+```qml
+NodeEditorWorkspace {
+    anchors.fill: parent
+    showTopBar: false     // hide toolbar
+    showBottomBar: false  // hide tab bar
+}
+```
+
+All keyboard shortcuts remain active. Use `framelessWindow: true` to remove window decorations (requires parent `Window` with `Qt.FramelessWindowHint`).
+
 ## Running Tests
 
 ```bash

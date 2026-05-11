@@ -1,123 +1,100 @@
 # Built-in Nodes
 
-The NodeEditor includes **153+ built-in nodes** across 15 categories. Nodes are registered via `registerDefaultNodeTypes()`.
+The NodeEditor includes **~157 built-in nodes** across 12 active categories. Nodes are registered via `registerDefaultNodeTypes()` in `DefaultNodes.cpp`.
 
-## Math (37 nodes)
+## 📂 Node Documentation by Category
 
-### Basic Arithmetic
-`add`, `subtract`, `multiply`, `divide`, `modulo`, `power`, `sqrt`, `abs`, `negate`, `clamp`, `lerp`, `remap`
+Detailed docs with inputs, outputs, and usage examples are available for each category:
 
-### Comparison
-`greater`, `less`, `equal`, `notEqual`, `greaterEqual`, `lessEqual`, `compare`
+| Category | Nodes | Docs |
+|---|---|---|
+| [Input](nodes/categories/Input/readme) | 1 | JSON file reader |
+| [SubGraph](nodes/categories/SubGraph/readme) | 3 | Nested graph containers |
+| [System](nodes/categories/System/readme) | 5 | OS, time, clipboard, process |
+| [Math](nodes/categories/Math/readme) | 41 | Arithmetic, trig, vectors, random |
+| [Color](nodes/categories/Color/readme) | 16 | Create, manipulate, convert, palettes |
+| [Data](nodes/categories/Data/readme) | 9 | JSON, serialization, file I/O |
+| [Logic](nodes/categories/Logic/readme) | 7 | AND/OR/NOT, compare, check |
+| [Events](nodes/categories/Events/readme) | 6 | Begin, tick, timer, signals |
+| [Generators](nodes/categories/Generators/readme) | 5 | Sine wave, noise, oscillator, camera |
+| [Output](nodes/categories/Output/readme) | 28 | Display (inline), charts, debug, export |
+| [Qt](nodes/categories/Qt/readme) | 10 | QObject, widgets, QML bridge |
+| [Utility](nodes/categories/Utility/readme) | 26 | Flow, value, collections, strings, hash |
+| **Total** | **~157** | |
 
-### Advanced
-`floor`, `ceil`, `round`, `min`, `max`, `average`, `sum`, `product`, `mapRange`, `smoothstep`
+## Summary by Category
 
-### Trigonometry
-`sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `atan2`, `degToRad`, `radToDeg`
+### Math (41 nodes)
+**Basic Operations:** add, subtract, multiply, divide, modulo, power, squareRoot, absolute, negate, clamp, remap, lerp, smoothstep, round, floor, ceil, fract, sign, normalize
+**Comparison:** equal, notEqual, greaterThan, lessThan, greaterEqual, lessEqual, compare, clamp, min, max, average, sum
+**Trigonometry:** sin, cos, tan, asin, acos, atan, degToRad, radToDeg
+**Vector:** vec2, vec3, vec4, dotProduct, crossProduct, length, distance
+**Random:** randomFloat, randomInteger, noise, seedRandom
 
-### Vector
-`vec2`, `vec3`, `vec4`, `vectorAdd`, `vectorScale`, `vectorDot`, `vectorCross`, `vectorLength`, `vectorNormalize`
+### Logic (7 nodes)
+**Basic:** and, or, xor, not
+**Compare:** booleanCompare
+**Check:** isTrue, isFalse
 
-### Random
-`randomFloat`, `randomInt`, `randomSeed`, `randomVector`, `noise`, `randomRange`
+### Utility (26 nodes)
+**Flow:** sequence, branch, switch, gate, delay, timer
+**Value:** reroute, cache, constant, debugPrint, watch, typeConvert
+**Collections:** makeArray, appendArray, removeArrayItem, count, contains
+**Strings:** concat, split, replace, regex, toUpper, toLower
+**Hash:** uuidGenerate, md5, sha256
 
-## Logic (7 nodes)
-`and`, `or`, `not`, `xor`, `if`, `switch`, `select`
+### Color (16 nodes)
+**Basics:** rgb, hsv, hex, fromString
+**Manipulation:** blend, multiply, invert, saturation, brightness, contrast
+**Conversion:** rgbToHsv, hsvToRgb, rgbToHex, hexToRgb
+**Palette:** gradient, generator
 
-## Utility (26 nodes)
+### Data (9 nodes)
+**JSON:** parse, get, set, array
+**Serialization:** serialize, deserialize
+**File I/O:** read, write, csvParse
 
-### Flow Control
-`delay`, `toggle`, `flipFlop`, `gate`, `pulse`, `counter`, `timer`, `sequence`
+### Events (6 nodes)
+**Core:** begin, tick, timerEvent, inputEvent, signalEvent, propertyChanged
 
-### Value
-`constant`, `variable`, `int`, `float`, `string`, `boolean`, `color`, `array`, `map`, `range`
+### Generators (5 nodes)
+**Wave:** sine, noise, oscillator
+**Color:** gradient
+**Media:** camera
 
-### Collections
-`listGet`, `listSet`, `listLength`, `listAppend`, `listRemove`, `mapGet`, `mapSet`
+### Output (28 nodes)
+**Value (inline):** numberDisplay, textDisplay, booleanIndicator, vectorDisplay
+**Chart (inline):** linePlot, scatterPlot, barChart, pieChart, histogram, heatmap
+**Matrix (inline):** matrixDisplay, memoryViewer
+**Utility (inline):** progressBar, gauge, compass, fpsMeter
+**LED Matrix (inline):** ledMatrixDisplay
+**Visual:** imageOutput, videoOutput, viewportOutput, pixelBufferOutput
+**Data:** fileWriter, jsonExport
+**Debug:** print, logger, graphInspector, watchValue, performanceMonitor
 
-### String
-`stringConcat`, `stringSplit`, `stringLength`, `stringSubstring`, `stringReplace`, `stringToNumber`, `numberToString`
+### System (5 nodes)
+**Info:** currentTime, envVar, osInfo
+**I/O:** clipboard
+**Process:** processExecute
 
-### Hash
-`hashMD5`, `hashSHA1`, `hashSHA256`
+### Qt (10 nodes)
+**QObject:** connectSignal, emitSignal, setProperty, getProperty, invokeMethod
+**Widgets:** buttonClicked, sliderValue, textChanged
+**QML:** qmlProperty, qmlSignal
 
-## Color (16 nodes)
+### Input (1 node)
+**File:** jsonInput
 
-### Basics
-`colorCreate`, `colorRGBA`, `colorHSLA`, `colorHex`, `colorLerp`, `colorBrighten`, `colorDarken`
+### SubGraph (3 nodes)
+**Interface:** canvasInput, canvasOutput
+**Container:** canvasNode
 
-### Manipulation
-`colorSaturate`, `colorDesaturate`, `colorInvert`, `colorMix`, `colorBlend`, `colorComplement`
+## Planned Categories
 
-### Conversion
-`colorToRGB`, `colorToHSL`, `colorToHex`, `colorToVector`, `vectorToColor`, `colorTemperature`
-
-### Palette
-`paletteAnalogous`, `paletteMonochromatic`, `paletteTriadic`, `paletteComplementary`, `paletteSplitComplementary`
-
-## Events (6 nodes)
-`onStart`, `onUpdate`, `onKeyPress`, `onMouseClick`, `onTimer`, `onChange`
-
-## Data (9 nodes)
-
-### JSON
-`jsonParse`, `jsonStringify`, `jsonGet`, `jsonSet`, `jsonArray`, `jsonObject`
-
-### Serialization
-`dataToJSON`, `dataFromJSON`, `dataToBinary`, `dataFromBinary`
-
-### File I/O
-`fileRead`, `fileWrite`, `fileExists`, `fileDelete`, `pathJoin`
-
-## Output (28 nodes)
-
-### Visual
-`imageOutput`, `videoOutput`, `viewportOutput`, `pixelBufferOutput`
-
-### Value (inline preview)
-`numberDisplay`, `textDisplay`, `booleanIndicator`, `vectorDisplay`
-
-### Chart (inline preview)
-`linePlot`, `scatterPlot`, `barChart`, `pieChart`, `histogram`, `heatmap`
-
-### Matrix (inline preview)
-`matrixDisplay`, `memoryViewer`
-
-### Utility (inline preview)
-`progressBar`, `gauge`, `compass`, `fpsMeter`
-
-### LED Matrix (inline preview)
-`ledMatrixDisplay`
-
-### Data
-`fileWriter`, `jsonExport`
-
-### Debug
-`print`, `logger`, `graphInspector`, `watchValue`, `performanceMonitor`
-
-**Note**: Display nodes with "inline preview" render their output visually inside the node body on the canvas, rather than showing raw values in the Properties panel.
-
-## System (5 nodes)
-`currentTime`, `envVar`, `osInfo`, `clipboard`, `processExecute`
-
-## Generators (6 nodes)
-`sineWave`, `noiseGenerator`, `gradient`, `oscillator`, `cameraFeed`, `inputNode`
-
-## Qt (10 nodes)
-`connectSignal`, `emitSignal`, `setProperty`, `getProperty`, `invokeMethod`, `buttonClicked`, `sliderValue`, `textChanged`, `qmlProperty`, `qmlSignal`
-
-## Audio (stub)
-Audio nodes are planned but not yet implemented.
-
-## Video (stub)
-Video nodes are planned but not yet implemented.
-
-## Network (stub)
-Network nodes are planned but not yet implemented.
-
-## Script (stub)
-Script nodes are planned but not yet implemented.
-
-## Device (stub)
-Device nodes are planned but not yet implemented.
+| Category | Status |
+|---|---|
+| Audio | ⏳ Requires Qt Multimedia |
+| Device | ⏳ Requires serial/MIDI/GPIO libs |
+| Network | ⏳ Requires Qt Network |
+| Script | ⏳ Requires scripting backend |
+| Video | ⏳ Requires Qt Multimedia/FFmpeg |

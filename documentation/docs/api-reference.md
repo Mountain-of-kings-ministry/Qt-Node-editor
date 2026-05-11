@@ -112,7 +112,29 @@ Triggered by `nodeDataChanged`, `nodeAdded`, and `edgeAdded` signals.
 ### NodeEditorWorkspace
 The main workspace component. Self-contained with toolbar, canvas, properties panel, and tab bar.
 
-**Properties**: `graphModel`, `undoManager`
+**Properties**: `graphModel`, `undoManager`, `showTopBar`, `showBottomBar`, `framelessWindow`
+
+### Embedding / Configuration
+
+`NodeEditorWorkspace` exposes three boolean properties for embedding as a package:
+
+| Property | Default | Description |
+|---|---|---|
+| `showTopBar` | `true` | Show/hide the top toolbar (File, Add, Fit, Zoom, Undo/Redo, Compute) |
+| `showBottomBar` | `true` | Show/hide the bottom tab bar (tabs, add tab, node count) |
+| `framelessWindow` | `false` | When `true`, sets parent window flags to `Qt.Window \| Qt.FramelessWindowHint` |
+
+All keyboard shortcuts remain active regardless of bar visibility.
+
+```qml
+// Example: embed with only the canvas (no bars, no window frame)
+NodeEditorWorkspace {
+    anchors.fill: parent
+    showTopBar: false
+    showBottomBar: false
+    framelessWindow: true
+}
+```
 
 ### NodeCanvas
 The node graph canvas. Handles pan, zoom, selection, connections, and drag-drop.

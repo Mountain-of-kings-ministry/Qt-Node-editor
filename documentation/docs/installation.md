@@ -77,3 +77,25 @@ NodeEditorWorkspace {
     undoManager: _undoManager
 }
 ```
+
+### Embedding Configuration
+
+`NodeEditorWorkspace` supports hiding UI elements for embedded use:
+
+| Property | Default | Description |
+|---|---|---|
+| `showTopBar` | `true` | Show/hide the top toolbar (File, Add, Fit, Zoom, Undo/Redo, Compute) |
+| `showBottomBar` | `true` | Show/hide the bottom tab bar (tabs, add tab, node count) |
+| `framelessWindow` | `false` | Sets parent window flags to `Qt.Window \| Qt.FramelessWindowHint` |
+
+All keyboard shortcuts remain active regardless of bar visibility.
+
+```qml
+// Fullscreen minimal embed
+NodeEditorWorkspace {
+    anchors.fill: parent
+    showTopBar: false
+    showBottomBar: false
+    framelessWindow: true
+}
+```

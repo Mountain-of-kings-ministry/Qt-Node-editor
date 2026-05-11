@@ -1,0 +1,34 @@
+# Input
+
+**Color:** `#4CDF8B` | **Nodes:** 1
+
+The Input category provides nodes for reading external data into the graph.
+
+## File
+
+### JSON Input
+
+| | |
+|---|---|
+| **Type** | `JsonInput` |
+| **Node Name** | JSON Input |
+| **Description** | Reads a JSON file from disk and outputs its parsed contents. Useful for loading configuration, level data, or any structured data at runtime. |
+
+**Inputs**
+
+| Port | Type | Default | Description |
+|---|---|---|---|
+| `filePath` | String | `""` | Path to the JSON file on disk |
+
+**Outputs**
+
+| Port | Type | Description |
+|---|---|---|
+| `output` | Generic | Parsed JSON object/array/value |
+
+**Example Usage**
+
+```
+[JSON Input] → [JSON Get] → [parse nodes]
+   filePath: "config.json"
+```
