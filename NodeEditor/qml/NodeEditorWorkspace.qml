@@ -523,7 +523,7 @@ Item {
                 var fname = parts[parts.length - 1]
                 if (fname.indexOf(".") > 0) fname = fname.substring(0, fname.lastIndexOf("."))
                 tabModel.renameTab(targetIdx, fname)
-                if (targetIdx === tabModel.activeIndex) canvasItem.gridCanvas.requestPaint()
+                if (targetIdx === tabModel.activeIndex && canvasItem && canvasItem.gridCanvas) canvasItem.gridCanvas.requestPaint()
             }
             tabContextMenuIndex = -1
         }

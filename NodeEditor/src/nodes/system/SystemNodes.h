@@ -6,6 +6,10 @@
 #include <QSysInfo>
 #include <QClipboard>
 #include <QGuiApplication>
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
 
 namespace NodeEditor {
 
@@ -109,5 +113,75 @@ public:
         return {{"output", "Process execution (stub)"}, {"success", false}};
     }
 };
+
+// CanvasNode: loads a sub-graph JSON file and outputs parsed structure
+class CanvasNode : public BaseNode {
+    Q_OBJECT
+public:
+    using BaseNode::BaseNode;
+    QList<PortInfo> inputSpec() const override {
+        return {{PortType::String, "filePath", QVariant("")}};
+    }
+    QList<PortInfo> outputSpec() const override {
+        return {{PortType::Generic, "result", QVariant()}};
+    }
+    QVariantMap compute(const QVariantMap &inputs) override {
+        QVariantMap out;
+        QString filePath = inputs.value("filePath").toString().trimmed();
+        if (filePath.isEmpty()) {
+            out["result"] = QVariantMap();
+            return out;
+        }
+
+        QFile file(filePath);
+        if (!file.open(QIODevice::ReadOnly)) {
+            qWarning() << "CanvasNode: cannot open file:" << filePath;
+            out["result"] = QVariantMap();
+            return out;
+        }
+
+        QByteArray data = file.readAll();
+        file.close();
+
+        QJsonParseError err;
+        QJsonDocument doc = QJsonDocument::fromJson(data, &err);
+        if (err.error != QJsonParseError::NoError) {
+            qWarning() << "CanvasNode: JSON parse error:" << err.errorString();
+            out["result"] = QString::fromUtf8(data);
+            return out;
+        }
+
+        if (doc.isObject())
+            out["result"] = doc.object().toVariantMap();
+        else if (doc.isArray())
+            out["result"] = doc.array().toVariantList();
+        else
+            out["result"] = QString::fromUtf8(data);
+
+        return out;
+    }
+    QString nodeType() const override { return "CanvasNode"; }
+    QString nodeName() const override { return "Canvas Node"; }
+    QString nodeCategory() const override { return "SubGraph"; }
+    QString nodeSubCategory() const override { return "Container"; }
+    QString displayColor() const override { return "#00CEC9"; }
+};
+
+inline void registerSystemNodeTypes(GraphModel *model)
+{
+    if (!model) return;
+
+    // CanvasNode
+    BaseNode::registerType("CanvasNode", []() { return new CanvasNode(); });
+
+    NodeTypeInfo canvasNodeInfo;
+    canvasNodeInfo.inputs["filePath"] = PortInfo{PortType::String, "filePath", QVariant("")};
+    canvasNodeInfo.outputs["result"] = PortInfo{PortType::Generic, "result", QVariant()};
+    canvasNodeInfo.displayColor = "#00CEC9";
+    canvasNodeInfo.categoryId = "SubGraph";
+    canvasNodeInfo.subCategory = "Container";
+    canvasNodeInfo.nodeName = "Canvas Node";
+    model->registerNodeType("CanvasNode", canvasNodeInfo);
+}
 
 } // namespace NodeEditor

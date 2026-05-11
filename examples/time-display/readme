@@ -1,0 +1,5 @@
+this demo is for displaying the current time on the node, using led matrix
+make the nodes required
+
+
+write the node connection json so i wont have to wire it my self i just import it

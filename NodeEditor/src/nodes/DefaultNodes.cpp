@@ -1,4 +1,5 @@
 #include "NodeEditor/DefaultNodes.h"
+#include "system/SystemNodes.h"
 #include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -111,61 +112,6 @@ QString JsonInputNode::nodeCategory() const { return "Input"; }
 QString JsonInputNode::nodeSubCategory() const { return "File"; }
 QString JsonInputNode::displayColor() const { return "#00CEC9"; }
 
-// ── CanvasNode ──────────────────────────────────────────────
-
-QList<PortInfo> CanvasNode::inputSpec() const
-{
-    return {{PortType::String, "filePath", QVariant("")}};
-}
-
-QList<PortInfo> CanvasNode::outputSpec() const
-{
-    return {{PortType::Generic, "result", QVariant()}};
-}
-
-QVariantMap CanvasNode::compute(const QVariantMap &inputs)
-{
-    QVariantMap out;
-    QString filePath = inputs.value("filePath").toString().trimmed();
-    if (filePath.isEmpty()) {
-        out["result"] = QVariantMap();
-        return out;
-    }
-
-    QFile file(filePath);
-    if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "CanvasNode: cannot open file:" << filePath;
-        out["result"] = QVariantMap();
-        return out;
-    }
-
-    QByteArray data = file.readAll();
-    file.close();
-
-    QJsonParseError err;
-    QJsonDocument doc = QJsonDocument::fromJson(data, &err);
-    if (err.error != QJsonParseError::NoError) {
-        qWarning() << "CanvasNode: JSON parse error:" << err.errorString();
-        out["result"] = QString::fromUtf8(data);
-        return out;
-    }
-
-    if (doc.isObject())
-        out["result"] = doc.object().toVariantMap();
-    else if (doc.isArray())
-        out["result"] = doc.array().toVariantList();
-    else
-        out["result"] = QString::fromUtf8(data);
-
-    return out;
-}
-
-QString CanvasNode::nodeType() const { return "CanvasNode"; }
-QString CanvasNode::nodeName() const { return "Canvas Node"; }
-QString CanvasNode::nodeCategory() const { return "SubGraph"; }
-QString CanvasNode::nodeSubCategory() const { return "Container"; }
-QString CanvasNode::displayColor() const { return "#00CEC9"; }
-
 // ── Registration ────────────────────────────────────────────
 
 void registerDefaultNodeTypes(GraphModel *model)
@@ -176,7 +122,8 @@ void registerDefaultNodeTypes(GraphModel *model)
     BaseNode::registerType("CanvasInput", []() { return new CanvasInputNode(); });
     BaseNode::registerType("CanvasOutput", []() { return new CanvasOutputNode(); });
     BaseNode::registerType("JsonInput", []() { return new JsonInputNode(); });
-    BaseNode::registerType("CanvasNode", []() { return new CanvasNode(); });
+    // Register system node types (CanvasNode etc.)
+    registerSystemNodeTypes(model);
 
     // Register category
     model->registerCategory({"SubGraph", "SubGraph", QColor("#6C5CE7")});
@@ -211,15 +158,6 @@ void registerDefaultNodeTypes(GraphModel *model)
     jsonInputInfo.nodeName = "JSON Input";
     model->registerNodeType("JsonInput", jsonInputInfo);
 
-    // CanvasNode metadata
-    NodeTypeInfo canvasNodeInfo;
-    canvasNodeInfo.inputs["filePath"] = PortInfo{PortType::String, "filePath", QVariant("")};
-    canvasNodeInfo.outputs["result"] = PortInfo{PortType::Generic, "result", QVariant()};
-    canvasNodeInfo.displayColor = "#00CEC9";
-    canvasNodeInfo.categoryId = "SubGraph";
-    canvasNodeInfo.subCategory = "Container";
-    canvasNodeInfo.nodeName = "Canvas Node";
-    model->registerNodeType("CanvasNode", canvasNodeInfo);
 }
 
 } // namespace NodeEditor

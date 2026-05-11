@@ -462,6 +462,116 @@ bool GraphModel::qmlIsPortConnected(const QString &nodeId, const QString &port, 
     return false;
 }
 
+// ── Dynamic port management ─────────────────────────────────
+
+void GraphModel::qmlAddInputPort(const QString &nodeId, const QString &portName, int portType)
+{
+    QUuid id = strToUuid(nodeId);
+    for (auto &n : m_nodes) {
+        if (n.id == id) {
+            if (n.inputs.contains(portName)) return;
+            n.inputs[portName] = PortInfo{static_cast<PortType>(portType), portName, QVariant()};
+            emit qmlNodePortsChanged(nodeId);
+            emit nodeDataChanged(id, portName);
+            return;
+        }
+    }
+}
+
+void GraphModel::qmlRemoveInputPort(const QString &nodeId, const QString &portName)
+{
+    QUuid id = strToUuid(nodeId);
+    for (auto &n : m_nodes) {
+        if (n.id == id) {
+            n.inputs.remove(portName);
+            n.data.remove(portName);
+            emit qmlNodePortsChanged(nodeId);
+            return;
+        }
+    }
+}
+
+void GraphModel::qmlAddOutputPort(const QString &nodeId, const QString &portName, int portType)
+{
+    QUuid id = strToUuid(nodeId);
+    for (auto &n : m_nodes) {
+        if (n.id == id) {
+            if (n.outputs.contains(portName)) return;
+            n.outputs[portName] = PortInfo{static_cast<PortType>(portType), portName, QVariant()};
+            emit qmlNodePortsChanged(nodeId);
+            emit nodeDataChanged(id, portName);
+            return;
+        }
+    }
+}
+
+void GraphModel::qmlRemoveOutputPort(const QString &nodeId, const QString &portName)
+{
+    QUuid id = strToUuid(nodeId);
+    for (auto &n : m_nodes) {
+        if (n.id == id) {
+            n.outputs.remove(portName);
+            n.data.remove(portName);
+            emit qmlNodePortsChanged(nodeId);
+            return;
+        }
+    }
+}
+
+void GraphModel::qmlLoadCanvasFile(const QString &nodeId, const QString &filePath)
+{
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "qmlLoadCanvasFile: cannot open file:" << filePath;
+        return;
+    }
+
+    QByteArray data = file.readAll();
+    file.close();
+
+    QJsonParseError err;
+    QJsonDocument doc = QJsonDocument::fromJson(data, &err);
+    if (err.error != QJsonParseError::NoError) {
+        qWarning() << "qmlLoadCanvasFile: JSON parse error:" << err.errorString();
+        return;
+    }
+
+    if (!doc.isObject()) return;
+
+    QJsonObject rootObj = doc.object();
+    QJsonArray nodesArr = rootObj["nodes"].toArray();
+
+    int inputIdx = 0, outputIdx = 0;
+
+    for (const auto &val : nodesArr) {
+        QJsonObject obj = val.toObject();
+        QString type = obj["type"].toString();
+        QJsonObject dataObj = obj["data"].toObject();
+
+        if (type == "CanvasInput") {
+            QString name = dataObj["name"].toString();
+            if (name.isEmpty()) {
+                name = QStringLiteral("input_%1").arg(inputIdx);
+            }
+            int portType = static_cast<int>(PortType::Generic);
+            if (dataObj.contains("portType"))
+                portType = dataObj["portType"].toInt();
+            qmlAddInputPort(nodeId, name, portType);
+            inputIdx++;
+        } else if (type == "CanvasOutput") {
+            QString name = dataObj["name"].toString();
+            if (name.isEmpty()) {
+                name = QStringLiteral("output_%1").arg(outputIdx);
+            }
+            int portType = static_cast<int>(PortType::Generic);
+            if (dataObj.contains("portType"))
+                portType = dataObj["portType"].toInt();
+            qmlAddOutputPort(nodeId, name, portType);
+            outputIdx++;
+        }
+    }
+}
+
 // ── Static helpers ────────────────────────────────────────
 
 int GraphModel::portTypeToInt(PortType t)

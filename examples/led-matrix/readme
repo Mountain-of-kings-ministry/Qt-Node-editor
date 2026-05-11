@@ -1,0 +1,3 @@
+this is a led matrix the output node will give a led matrix output node printing abcd in a scrolling manner
+
+write the node connection json so i wont have to wire it my self i just import it

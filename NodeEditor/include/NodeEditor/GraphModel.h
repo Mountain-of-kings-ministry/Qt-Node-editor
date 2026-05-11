@@ -132,6 +132,14 @@ public:
     Q_INVOKABLE int qmlPortType(const QString &nodeId, const QString &port, bool isInput) const;
     Q_INVOKABLE bool qmlIsPortConnected(const QString &nodeId, const QString &port, bool isInput) const;
 
+    // Dynamic port management
+    Q_INVOKABLE void qmlAddInputPort(const QString &nodeId, const QString &portName, int portType);
+    Q_INVOKABLE void qmlRemoveInputPort(const QString &nodeId, const QString &portName);
+    Q_INVOKABLE void qmlAddOutputPort(const QString &nodeId, const QString &portName, int portType);
+    Q_INVOKABLE void qmlRemoveOutputPort(const QString &nodeId, const QString &portName);
+    // Load a canvas sub-graph file and dynamically create ports on the target node
+    Q_INVOKABLE void qmlLoadCanvasFile(const QString &nodeId, const QString &filePath);
+
     // Static helpers
     static int portTypeToInt(PortType t);
     static QString portTypeColor(int portType);
@@ -158,6 +166,7 @@ signals:
     void qmlEdgeRemoved(QString edgeId);
     void qmlNodeDataChanged(QString nodeId, QString key);
     void qmlNodePositionChanged(QString nodeId);
+    void qmlNodePortsChanged(QString nodeId);
 
 private:
     QList<NodeData> m_nodes;

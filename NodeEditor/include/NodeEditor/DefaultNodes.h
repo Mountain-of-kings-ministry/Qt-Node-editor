@@ -52,21 +52,6 @@ public:
     QString displayColor() const override;
 };
 
-// CanvasNode: loads a sub-graph JSON file and outputs parsed structure
-class CanvasNode : public BaseNode {
-    Q_OBJECT
-public:
-    using BaseNode::BaseNode;
-    QVariantMap compute(const QVariantMap &inputs) override;
-    QList<PortInfo> inputSpec() const override;
-    QList<PortInfo> outputSpec() const override;
-    QString nodeType() const override;
-    QString nodeName() const override;
-    QString nodeCategory() const override;
-    QString nodeSubCategory() const override;
-    QString displayColor() const override;
-};
-
 // Register all default node types, categories, and BaseNode factories on a model
 void registerDefaultNodeTypes(GraphModel *model);
 

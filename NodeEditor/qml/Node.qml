@@ -63,6 +63,12 @@ Item {
                 _dataVersion++
             }
         }
+        function onQmlNodePortsChanged(id) {
+            if (id === root.nodeId) {
+                nodeInfo = graphModel.qmlNodeInfo(root.nodeId)
+                _dataVersion++
+            }
+        }
         function onQmlEdgeAdded(id) {
             if (!root.graphModel) return
             var info = root.graphModel.qmlEdgeInfo(id)

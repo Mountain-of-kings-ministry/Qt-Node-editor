@@ -10,6 +10,7 @@ qt_add_library(NodeEditorCore STATIC
     include/NodeEditor/UndoManager.h
     include/NodeEditor/BaseNode.h
     include/NodeEditor/DefaultNodes.h
+    src/nodes/system/SystemNodes.h
 )
 
 target_include_directories(NodeEditorCore PUBLIC
