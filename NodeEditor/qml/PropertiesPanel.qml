@@ -14,6 +14,13 @@ Item {
 
     property bool _isDisplayNode: false
 
+    function truncate(val) {
+        if (val === undefined || val === null) return ""
+        var s = String(val)
+        if (s.length > 5) return s.substring(0, 5) + ".."
+        return s
+    }
+
     onNodeIdChanged: {
         if (nodeId && graphModel)
             nodeInfo = graphModel.qmlNodeInfo(nodeId)
@@ -105,7 +112,7 @@ Item {
 
                     Item {
                         id: propDelegate
-                        width: detailColumn.width
+                        Layout.fillWidth: true
                         height: 24
                         property string dataOldVal: ""
 
@@ -115,38 +122,61 @@ Item {
                             font.pixelSize: 11
                             anchors.verticalCenter: parent.verticalCenter
                             anchors.left: parent.left
+                            anchors.right: inputContainer.left
+                            anchors.rightMargin: 4
+                            elide: Text.ElideRight
                         }
 
-                        TextField {
-                            height: 22
-                            width: 80
+                        Item {
+                            id: inputContainer
                             anchors.right: parent.right
+                            anchors.rightMargin: 10
                             anchors.verticalCenter: parent.verticalCenter
-                            horizontalAlignment: TextInput.AlignRight
-                            color: "#FFFFFF"
-                            background: Rectangle {
-                                color: "#3A3A3A"
-                                radius: 3
-                                border.color: "#555555"
-                                border.width: 1
-                            }
-                            font.pixelSize: 10
-                            padding: 2
+                            width: 80
+                            height: 22
 
-                            text: {
-                                if (!root.graphModel) return ""
-                                var val = root.graphModel.qmlNodeData(root.nodeId, modelData)
-                                return val !== undefined && val !== null ? String(val) : ""
+                            TextField {
+                                id: propInputField
+                                anchors.fill: parent
+                                horizontalAlignment: TextInput.AlignRight
+                                color: activeFocus ? "#FFFFFF" : "transparent"
+                                background: Rectangle {
+                                    color: "#3A3A3A"
+                                    radius: 3
+                                    border.color: "#555555"
+                                    border.width: 1
+                                }
+                                font.pixelSize: 10
+                                padding: 2
+
+                                text: {
+                                    if (!root.graphModel) return ""
+                                    var val = root.graphModel.qmlNodeData(root.nodeId, modelData)
+                                    return val !== undefined && val !== null ? String(val) : ""
+                                }
+
+                                onActiveFocusChanged: {
+                                    if (activeFocus)
+                                        propDelegate.dataOldVal = text
+                                }
+
+                                onEditingFinished: {
+                                    if (root.undoManager && propDelegate.dataOldVal !== text)
+                                        root.undoManager.qmlSetNodeData(root.nodeId, modelData, propDelegate.dataOldVal, text)
+                                }
                             }
 
-                            onActiveFocusChanged: {
-                                if (activeFocus)
-                                    propDelegate.dataOldVal = text
-                            }
-
-                            onEditingFinished: {
-                                if (root.undoManager && propDelegate.dataOldVal !== text)
-                                    root.undoManager.qmlSetNodeData(root.nodeId, modelData, propDelegate.dataOldVal, text)
+                            // Truncated display overlay (visible when not editing)
+                            Text {
+                                anchors.fill: parent
+                                anchors.rightMargin: 4
+                                horizontalAlignment: Text.AlignRight
+                                verticalAlignment: Text.AlignVCenter
+                                color: "#FFFFFF"
+                                font.pixelSize: 10
+                                text: root.truncate(propInputField.text)
+                                visible: !propInputField.activeFocus
+                                clip: true
                             }
                         }
                     }
@@ -158,27 +188,32 @@ Item {
                     visible: !root._isDisplayNode
 
                     Item {
-                        width: detailColumn.width
+                        Layout.fillWidth: true
                         height: 20
 
                         Label {
-                            text: modelData + " (output)"
+                            text: modelData + " (out):"
                             color: "#888888"
                             font.pixelSize: 11
                             anchors.verticalCenter: parent.verticalCenter
                             anchors.left: parent.left
+                            anchors.right: outValLabel.left
+                            anchors.rightMargin: 4
+                            elide: Text.ElideRight
                         }
 
                         Label {
+                            id: outValLabel
                             text: {
                                 if (!root.graphModel || !root.nodeId) return ""
                                 var val = root.graphModel.qmlNodeData(root.nodeId, modelData)
-                                return val !== undefined && val !== null ? String(val) : ""
+                                return root.truncate(val)
                             }
                             color: "#AAAAAA"
                             font.pixelSize: 11
                             anchors.verticalCenter: parent.verticalCenter
                             anchors.right: parent.right
+                            anchors.rightMargin: 10
                         }
                     }
                 }

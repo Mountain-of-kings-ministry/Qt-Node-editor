@@ -46,6 +46,13 @@ Item {
         return canvas.selectedNodeIds && canvas.selectedNodeIds.indexOf(root.nodeId) >= 0
     }
 
+    function truncate(val) {
+        if (val === undefined || val === null) return ""
+        var s = String(val)
+        if (s.length > 5) return s.substring(0, 5) + ".."
+        return s
+    }
+
     function syncFromModel() {
         if (!graphModel || !nodeId) return
         nodeInfo = graphModel.qmlNodeInfo(nodeId)
@@ -291,46 +298,63 @@ Item {
                     }
 
                     // Standard text field for normal input ports
-                    TextField {
-                        id: inputField
-                        height: 20
-                        width: 70
+                    Item {
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
-                        horizontalAlignment: TextInput.AlignRight
-                        color: "#FFFFFF"
-                        background: Rectangle {
-                            color: "#3A3A3A"
-                            radius: 3
-                            border.color: "#555555"
-                            border.width: 1
-                        }
-                        font.pixelSize: 10
-                        padding: 2
-                        visible: !isFilePathPort
+                        width: 70
+                        height: 20
+                        visible: !inputDelegate.isFilePathPort
 
-                        text: {
-                            if (!root.graphModel) return ""
-                            root._dataVersion
-                            var val = root.graphModel.qmlNodeData(root.nodeId, modelData)
-                            return val !== undefined && val !== null ? String(val) : ""
+                        TextField {
+                            id: inputField
+                            anchors.fill: parent
+                            horizontalAlignment: TextInput.AlignRight
+                            color: activeFocus ? "#FFFFFF" : "transparent"
+                            background: Rectangle {
+                                color: "#3A3A3A"
+                                radius: 3
+                                border.color: "#555555"
+                                border.width: 1
+                            }
+                            font.pixelSize: 10
+                            padding: 2
+
+                            text: {
+                                if (!root.graphModel) return ""
+                                root._dataVersion
+                                var val = root.graphModel.qmlNodeData(root.nodeId, modelData)
+                                return val !== undefined && val !== null ? String(val) : ""
+                            }
+
+                            readOnly: {
+                                root._connectionVersion
+                                root.graphModel ? root.graphModel.qmlIsPortConnected(root.nodeId, modelData, true) : false
+                            }
+
+                            onActiveFocusChanged: {
+                                if (activeFocus)
+                                    inputDelegate.dataOldVal = text
+                            }
+
+                            onEditingFinished: {
+                                if (root.graphModel && root.graphModel.qmlIsPortConnected(root.nodeId, modelData, true))
+                                    return
+                                if (root.undoManager && inputDelegate.dataOldVal !== text)
+                                    root.undoManager.qmlSetNodeData(root.nodeId, modelData, inputDelegate.dataOldVal, text)
+                            }
                         }
 
-                        readOnly: {
-                            root._connectionVersion
-                            root.graphModel ? root.graphModel.qmlIsPortConnected(root.nodeId, modelData, true) : false
-                        }
-
-                        onActiveFocusChanged: {
-                            if (activeFocus)
-                                inputDelegate.dataOldVal = text
-                        }
-
-                        onEditingFinished: {
-                            if (root.graphModel && root.graphModel.qmlIsPortConnected(root.nodeId, modelData, true))
-                                return
-                            if (root.undoManager && inputDelegate.dataOldVal !== text)
-                                root.undoManager.qmlSetNodeData(root.nodeId, modelData, inputDelegate.dataOldVal, text)
+                        // Truncated display overlay (visible when not editing)
+                        Text {
+                            anchors.fill: parent
+                            anchors.rightMargin: 4
+                            horizontalAlignment: Text.AlignRight
+                            verticalAlignment: Text.AlignVCenter
+                            color: "#FFFFFF"
+                            font.pixelSize: 10
+                            text: root.truncate(inputField.text)
+                            visible: !inputField.activeFocus
+                            clip: true
                         }
                     }
                 }
@@ -373,7 +397,7 @@ Item {
                             if (!root.graphModel) return ""
                             root._dataVersion
                             var val = root.graphModel.qmlNodeData(root.nodeId, modelData)
-                            return val !== undefined && val !== null ? String(val) : ""
+                            return root.truncate(val)
                         }
                         color: "#4CDF8B"
                         font.pixelSize: 11
