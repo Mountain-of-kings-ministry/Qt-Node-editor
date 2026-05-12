@@ -365,6 +365,11 @@ QVariantMap GraphModel::qmlNodeInfo(const QString &nodeId) const
     return {};
 }
 
+QPointF GraphModel::qmlNodePosition(const QString &nodeId) const
+{
+    return nodePosition(strToUuid(nodeId));
+}
+
 void GraphModel::qmlSetNodePosition(const QString &nodeId, double x, double y)
 {
     setNodePosition(strToUuid(nodeId), QPointF(x, y));

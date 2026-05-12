@@ -1,0 +1,26 @@
+{
+  "cmake.sourceDirectory": "/home/david/Documents/projects/learn/nodeapackage",
+  "files.exclude": {
+    "**documentation/node_modules": true,
+    "**/code/vcpkg_installed": true,
+    "**/web": true,
+    "**/code/resources/icons/**": true,
+    "**/code/resources/status_icons/**": true
+  },
+
+  "search.exclude": {
+    "**documentation/node_modules": true,
+    "**/code/vcpkg_installed": true,
+    "**/web": true,
+    "**/code/resources/icons/**": true,
+    "**/code/resources/status_icons/**": true
+  },
+
+  "files.watcherExclude": {
+    "**documentation/node_modules/**": true,
+    "**/code/vcpkg_installed": true,
+    "**/web": true,
+    "**/code/resources/icons/**": true,
+    "**/code/resources/status_icons/**": true
+  }
+}

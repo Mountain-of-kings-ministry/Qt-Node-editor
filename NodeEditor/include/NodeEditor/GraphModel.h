@@ -119,6 +119,7 @@ public:
     Q_INVOKABLE void qmlRemoveNode(const QString &nodeId);
     Q_INVOKABLE QStringList qmlNodeIds() const;
     Q_INVOKABLE QVariantMap qmlNodeInfo(const QString &nodeId) const;
+    Q_INVOKABLE QPointF qmlNodePosition(const QString &nodeId) const;
     Q_INVOKABLE void qmlSetNodePosition(const QString &nodeId, double x, double y);
     Q_INVOKABLE void qmlSetNodeData(const QString &nodeId, const QString &key, const QVariant &value);
     Q_INVOKABLE QVariant qmlNodeData(const QString &nodeId, const QString &key) const;

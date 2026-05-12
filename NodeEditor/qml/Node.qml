@@ -63,7 +63,7 @@ Item {
     Connections {
         target: graphModel
         function onQmlNodePositionChanged(id) {
-            if (id === root.nodeId) {
+            if (id === root.nodeId && !dragArea.active) {
                 var info = graphModel.qmlNodeInfo(root.nodeId)
                 if (info && info.x !== undefined) {
                     root.x = info.x
@@ -116,39 +116,35 @@ Item {
             GradientStop { position: 0.7; color: Qt.darker(nodeInfo.color || "#4A9EFF", 1.3) }
         }
 
-        MouseArea {
+        DragHandler {
             id: dragArea
-            anchors.fill: parent
+            target: root
             cursorShape: Qt.OpenHandCursor
 
             property real dragStartX: 0
             property real dragStartY: 0
-            property real mouseStartX: 0
-            property real mouseStartY: 0
 
-            onPressed: function(mouse) {
-                cursorShape = Qt.ClosedHandCursor
-                dragStartX = root.x
-                dragStartY = root.y
-                mouseStartX = mouse.x
-                mouseStartY = mouse.y
-                var canvas = findCanvas()
-                if (canvas) canvas.selectNode(root.nodeId)
+            onActiveChanged: {
+                if (active) {
+                    dragStartX = root.x
+                    dragStartY = root.y
+                    var canvas = findCanvas()
+                    if (canvas) canvas.selectNode(root.nodeId)
+                } else {
+                    if (root.undoManager
+                            && (Math.abs(root.x - dragStartX) > 1 || Math.abs(root.y - dragStartY) > 1)) {
+                        // The node is already at the final position, but we tell undoManager about the move
+                        // UndoManager's qmlMoveNode might try to set position again, which is fine
+                        root.undoManager.qmlMoveNode(root.nodeId, dragStartX, dragStartY, root.x, root.y)
+                    }
+                }
             }
 
-            onPositionChanged: function(mouse) {
-                if (!pressed) return
-                var canvas = findCanvas()
-                var z = canvas ? canvas.zoom : 1.0
-                root.x = dragStartX + (mouse.x - mouseStartX) / z
-                root.y = dragStartY + (mouse.y - mouseStartY) / z
-            }
-
-            onReleased: function(mouse) {
-                cursorShape = Qt.OpenHandCursor
-                if (root.undoManager
-                        && (Math.abs(root.x - dragStartX) > 1 || Math.abs(root.y - dragStartY) > 1))
-                    root.undoManager.qmlMoveNode(root.nodeId, dragStartX, dragStartY, root.x, root.y)
+            onCentroidChanged: {
+                if (active && graphModel) {
+                    // Update graph model in real-time so connected edges can update their positions
+                    graphModel.qmlSetNodePosition(root.nodeId, root.x, root.y)
+                }
             }
         }
 
