@@ -34,21 +34,24 @@ Shape {
         var info = graphModel.qmlNodeInfo(nodeId)
         if (!info) return 0
         
-        if (isOutput) {
-            var ports = info.outputPorts || []
-            var idx = ports.indexOf(portName)
-            if (idx < 0) return 42
-            var numInputs = (info.inputPorts || []).length
-            if (numInputs > 0)
-                return 44 + numInputs * 22 + idx * 22
-            else
-                return 42 + idx * 22
-        } else {
-            var ports2 = info.inputPorts || []
-            var idx2 = ports2.indexOf(portName)
-            if (idx2 < 0) return 42
-            return 42 + idx2 * 22
+        var inPorts = info.inputPorts || []
+        if (!isOutput) {
+            var idx = inPorts.indexOf(portName)
+            // Input column starts at y=34 (24+10). Port center is at +8.
+            return idx < 0 ? 42 : 42 + idx * 22
         }
+        
+        var outPorts = info.outputPorts || []
+        var idxOut = outPorts.indexOf(portName)
+        if (idxOut < 0) return 42
+        
+        var numIn = inPorts.length
+        // Output column positioning logic:
+        // if numIn > 0: top = 36 + 22*numIn. Spacer = 10. Center = top + 10 + 8 = 54 + 22*numIn.
+        // if numIn == 0: top = 34. Spacer = 10. Center = top + 10 + 8 = 52.
+        if (numIn === 0)
+            return 52 + idxOut * 22
+        return 54 + numIn * 22 + idxOut * 22
     }
 
     function updateYOffsets() {
@@ -68,7 +71,7 @@ Shape {
         targetY = tgtPos.y + targetYOffset
     }
 
-    readonly property real curveDX: Math.max(60, Math.abs(targetX - sourceX) * 0.5)
+    readonly property real curveDX: Math.max(80, Math.abs(targetX - sourceX) * 0.45)
 
     // Approximate angle from source to target (good enough for arrow head)
     function angle() {
@@ -94,9 +97,11 @@ Shape {
         updatePositions()
     }
 
+    readonly property color portColor: graphModel ? graphModel.portTypeColor(graphModel.qmlPortType(sourceNodeId, sourcePort, false)) : "#888888"
+
     // Bézier curve line
     ShapePath {
-        strokeColor: root.hovered ? "#00B4FF" : "#888888"
+        strokeColor: root.hovered ? Qt.lighter(root.portColor, 1.3) : root.portColor
         strokeWidth: root.hovered ? 3 : 2
         fillColor: "transparent"
         capStyle: ShapePath.RoundCap
@@ -115,28 +120,28 @@ Shape {
         }
     }
 
-    // Arrow head (filled triangle at target end)
+    // Dot at target end (replaces arrowhead)
     ShapePath {
-        strokeColor: root.hovered ? "#00B4FF" : "#888888"
-        strokeWidth: 1
-        fillColor: root.hovered ? "#00B4FF" : "#888888"
-        capStyle: ShapePath.RoundCap
-        joinStyle: ShapePath.RoundJoin
-
-        startX: root.targetX
+        strokeColor: "transparent"
+        fillColor: root.hovered ? Qt.lighter(root.portColor, 1.3) : root.portColor
+        
+        // Start at target end
+        startX: root.targetX - 6
         startY: root.targetY
 
-        PathLine {
-            x: root.targetX - Math.cos(root.angle() - 0.4) * 10
-            y: root.targetY - Math.sin(root.angle() - 0.4) * 10
-        }
-        PathLine {
-            x: root.targetX - Math.cos(root.angle() + 0.4) * 10
-            y: root.targetY - Math.sin(root.angle() + 0.4) * 10
-        }
-        PathLine {
-            x: root.targetX
+        PathArc {
+            x: root.targetX + 6
             y: root.targetY
+            radiusX: 6
+            radiusY: 6
+            useLargeArc: true
+        }
+        PathArc {
+            x: root.targetX - 6
+            y: root.targetY
+            radiusX: 6
+            radiusY: 6
+            useLargeArc: true
         }
     }
 
@@ -163,17 +168,9 @@ Shape {
         id: ma
         anchors.fill: parent
         hoverEnabled: true
-        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        acceptedButtons: Qt.LeftButton
 
         onEntered: root.hovered = true
         onExited: root.hovered = false
-        onClicked: {
-            if (mouse.button === Qt.RightButton) {
-                if (root.undoManager)
-                    root.undoManager.qmlDisconnectEdge(root.edgeId)
-                else if (root.graphModel)
-                    root.graphModel.qmlDisconnectEdge(root.edgeId)
-            }
-        }
     }
 }

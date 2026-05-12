@@ -93,7 +93,7 @@ Executes simple stack-based scripts written in JSON (push, add, mul, sub, div, d
 5. Connected input fields are automatically locked (read-only)
 6. Delete nodes with **Delete** key or right-click → remove
 7. **Display nodes** show their output visually inside the node body (inline preview)
-8. Right-click a connected edge to disconnect
+8. **Right-click an output port** to disconnect
 9. Press **F** to fit all nodes into view
 
 ## Embedding Configuration

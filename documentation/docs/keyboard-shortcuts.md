@@ -17,9 +17,8 @@
 | `Shift+Drag` | Box-select multiple nodes |
 | `Middle-click drag` | Pan canvas |
 | `Right-click drag` | Pan canvas |
-| `Scroll wheel` | Zoom in/out |
 | `Shift+Click node body` | Add to selection (box-select mode) |
-| `Right-click edge` | Delete edge |
+| `Right-click output port` | Disconnect all wires from port |
 | `Escape` | Close Add Node popup / Cancel selection |
 
 > All shortcuts remain active even when the top bar or bottom tab bar is hidden via `showTopBar: false` / `showBottomBar: false`.
@@ -33,3 +32,4 @@
 | Release on input port | Complete connection |
 | Click node body | Select node |
 | Click empty canvas | Deselect all |
+| Right-click output port | Disconnect wires |

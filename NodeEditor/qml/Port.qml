@@ -25,6 +25,8 @@ Item {
     }
 
     function portColor() {
+        if (graphModel) return graphModel.portTypeColor(root.portType)
+        
         switch (root.portType) {
         case 0:  return "#4A9EFF"   // Int
         case 1:  return "#4CDF8B"   // Float
@@ -74,24 +76,35 @@ Item {
         anchors.margins: -10
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
 
         onPressed: function(mouse) {
-            if (root.isInput) return
+            if (mouse.button === Qt.RightButton) return
+
             var canvas = findCanvas()
             if (!canvas) return
-            var portCenter = root.mapToItem(canvas, width / 2, height / 2)
-            canvas.startConnection(root.nodeId, root.portName, portCenter.x, portCenter.y)
-            canvas.connectCurrentX = portCenter.x
-            canvas.connectCurrentY = portCenter.y
+            
+            // We pass the screen center as a fallback, but startConnection 
+            // now uses nodeLayout.getPortWorldPos for the actual wire start.
+            var pt = root.mapToItem(canvas, width / 2, height / 2)
+            canvas.startConnection(root.nodeId, root.portName, pt.x, pt.y)
+        }
+
+        onClicked: function(mouse) {
+            if (mouse.button === Qt.RightButton) {
+                if (!root.isInput && graphModel) {
+                    graphModel.qmlDisconnectPort(root.nodeId, root.portName, false)
+                }
+            }
         }
 
         onPositionChanged: function(mouse) {
             var canvas = findCanvas()
             if (!canvas || !canvas.connecting) return
             var pt = root.mapToItem(canvas, mouse.x, mouse.y)
-            canvas.connectCurrentX = pt.x
-            canvas.connectCurrentY = pt.y
-            // requestPaint is handled by the canvas binding
+            var worldPt = canvas.screenToWorld(pt.x, pt.y)
+            canvas.connectCurrentX = worldPt.x
+            canvas.connectCurrentY = worldPt.y
         }
 
         onReleased: function(mouse) {

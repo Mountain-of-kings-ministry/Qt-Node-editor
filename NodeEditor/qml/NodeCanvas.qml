@@ -10,6 +10,8 @@ Item {
     property var graphModel: null
     property var undoManager: null
 
+    property alias world: world
+
     property real zoom: 1.0
     property real panX: 0
     property real panY: 0
@@ -24,7 +26,6 @@ Item {
 
     onConnectCurrentXChanged: rubberBand.requestPaint()
     onConnectCurrentYChanged: rubberBand.requestPaint()
-    onConnectingChanged: rubberBand.requestPaint()
 
     property string selectedNodeId: ""
     property var selectedNodeIds: []
@@ -32,6 +33,38 @@ Item {
 
     signal nodeSelected(string nodeId)
     signal nodeDeselected()
+
+    QtObject {
+        id: nodeLayout
+        function getPortYOffset(nodeId, portName, isInput) {
+            if (!graphModel) return 42
+            var info = graphModel.qmlNodeInfo(nodeId)
+            if (!info) return 42
+            
+            var inPorts = info.inputPorts || []
+            if (isInput) {
+                var idx = inPorts.indexOf(portName)
+                return idx < 0 ? 42 : 42 + idx * 22
+            }
+            
+            var outPorts = info.outputPorts || []
+            var idxOut = outPorts.indexOf(portName)
+            if (idxOut < 0) return 42
+            
+            var numIn = inPorts.length
+            if (numIn === 0)
+                return 52 + idxOut * 22
+            return 54 + numIn * 22 + idxOut * 22
+        }
+
+        function getPortWorldPos(nodeId, portName, isInput) {
+            var pos = graphModel ? graphModel.qmlNodePosition(nodeId) : Qt.point(0,0)
+            return {
+                x: pos.x + (isInput ? 15 : 165),
+                y: pos.y + getPortYOffset(nodeId, portName, isInput)
+            }
+        }
+    }
 
     function screenToWorld(sx, sy) {
         return {
@@ -215,22 +248,8 @@ Item {
         z: 10
         x: root.panX
         y: root.panY
-        transform: Scale { origin.x: 0; origin.y: 0; xScale: root.zoom; yScale: root.zoom }
-
-        Instantiator {
-            id: nodeInstantiator
-            active: root.graphModel !== null
-            model: nodeModel
-
-            delegate: Node {
-                graphModel: root.graphModel
-                undoManager: root.undoManager
-                nodeId: model.nodeId
-                selected: root.selectedNodeIds.indexOf(model.nodeId) >= 0
-            }
-
-            onObjectAdded: function(index, obj) { obj.parent = world }
-        }
+        scale: root.zoom
+        transformOrigin: Item.TopLeft
 
         Instantiator {
             id: edgeInstantiator
@@ -249,97 +268,36 @@ Item {
 
             onObjectAdded: function(index, obj) { obj.parent = world }
         }
-    }
 
-    // ── Deselect overlay (below world, handles empty-space clicks, box-select, connections) ──
-    Rectangle {
-        id: deselectOverlay
-        anchors.fill: parent
-        z: 5
-        color: "transparent"
+        Instantiator {
+            id: nodeInstantiator
+            active: root.graphModel !== null
+            model: nodeModel
 
-        property bool isBoxSelecting: false
-        property real boxStartX: 0
-        property real boxStartY: 0
-
-        MouseArea {
-            anchors.fill: parent
-            acceptedButtons: Qt.LeftButton
-
-            onPressed: function(mouse) {
-                root.forceActiveFocus()
-
-                if (root.connecting) {
-                    return
-                }
-
-                if (root.selectMode === "box") {
-                    deselectOverlay.isBoxSelecting = true
-                    deselectOverlay.boxStartX = mouse.x
-                    deselectOverlay.boxStartY = mouse.y
-                    boxSelectRect.x = mouse.x
-                    boxSelectRect.y = mouse.y
-                    boxSelectRect.width = 0
-                    boxSelectRect.height = 0
-                    boxSelectRect.boxSelectActive = true
-                    return
-                }
-
-                if (root.hitTestNode(mouse.x, mouse.y) === ""
-                        && !(mouse.modifiers & Qt.ControlModifier))
-                    root.clearSelection()
+            delegate: Node {
+                graphModel: root.graphModel
+                undoManager: root.undoManager
+                nodeId: model.nodeId
+                selected: root.selectedNodeIds.indexOf(model.nodeId) >= 0
             }
 
-            onPositionChanged: function(mouse) {
-                if (deselectOverlay.isBoxSelecting) {
-                    boxSelectRect.x = Math.min(deselectOverlay.boxStartX, mouse.x)
-                    boxSelectRect.y = Math.min(deselectOverlay.boxStartY, mouse.y)
-                    boxSelectRect.width = Math.abs(mouse.x - deselectOverlay.boxStartX)
-                    boxSelectRect.height = Math.abs(mouse.y - deselectOverlay.boxStartY)
-                }
-                if (root.connecting) {
-                    root.connectCurrentX = mouse.x
-                    root.connectCurrentY = mouse.y
-                    rubberBand.requestPaint()
-                }
-            }
-
-            onReleased: function(mouse) {
-                if (root.connecting) {
-                    root.cancelConnection()
-                    return
-                }
-                if (deselectOverlay.isBoxSelecting) {
-                    deselectOverlay.isBoxSelecting = false
-                    boxSelectRect.boxSelectActive = false
-                    if (boxSelectRect.width > 5 || boxSelectRect.height > 5) {
-                        var topLeft = root.screenToWorld(boxSelectRect.x, boxSelectRect.y)
-                        var bottomRight = root.screenToWorld(
-                            boxSelectRect.x + boxSelectRect.width,
-                            boxSelectRect.y + boxSelectRect.height)
-                        var found = root.nodesInRect(topLeft.x, topLeft.y, bottomRight.x, bottomRight.y)
-                        if (found.length > 0) {
-                            root.selectedNodeIds = found
-                            root.selectedNodeId = found[found.length - 1]
-                            nodeSelected(root.selectedNodeId)
-                        }
-                    }
-                }
-            }
+            onObjectAdded: function(index, obj) { obj.parent = world }
         }
     }
 
-    // ── Pan / zoom overlay (below world, handles middle/right button + wheel) ──
+    // ── Interaction overlay (handles panning, selection, connections) ──
     MouseArea {
-        id: canvasMouse
+        id: mainMouseArea
         anchors.fill: parent
-        z: 0
-        acceptedButtons: Qt.MiddleButton | Qt.RightButton
+        z: 5
+        acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
 
+        property bool isPanning: false
+        property bool isBoxSelecting: false
         property real lastPanX: 0
         property real lastPanY: 0
-        property real panStartX: 0
-        property real panStartY: 0
+        property real startX: 0
+        property real startY: 0
 
         onWheel: function(wheel) {
             var oldZoom = root.zoom
@@ -351,19 +309,77 @@ Item {
         }
 
         onPressed: function(mouse) {
-            if (mouse.button === Qt.MiddleButton || mouse.button === Qt.RightButton) {
-                lastPanX = root.panX
-                lastPanY = root.panY
-                panStartX = mouse.x
-                panStartY = mouse.y
+            root.forceActiveFocus()
+            startX = mouse.x
+            startY = mouse.y
+            lastPanX = root.panX
+            lastPanY = root.panY
+
+            if (root.connecting) return
+
+            // Panning: Middle, Right, or Left (in default mode if no node hit)
+            var hitNodeId = root.hitTestNode(mouse.x, mouse.y)
+            if (mouse.button === Qt.MiddleButton || mouse.button === Qt.RightButton || 
+                (mouse.button === Qt.LeftButton && root.selectMode === "default" && hitNodeId === "")) {
+                isPanning = true
+                cursorShape = Qt.ClosedHandCursor
+            } else if (mouse.button === Qt.LeftButton && root.selectMode === "box") {
+                isBoxSelecting = true
+                boxSelectRect.x = mouse.x
+                boxSelectRect.y = mouse.y
+                boxSelectRect.width = 0
+                boxSelectRect.height = 0
+                boxSelectRect.boxSelectActive = true
+            }
+
+            if (mouse.button === Qt.LeftButton && hitNodeId === "" && !(mouse.modifiers & Qt.ControlModifier)) {
+                root.clearSelection()
             }
         }
 
         onPositionChanged: function(mouse) {
-            if (pressed && (mouse.button === Qt.MiddleButton || mouse.button === Qt.RightButton)) {
-                root.panX = lastPanX + (mouse.x - panStartX)
-                root.panY = lastPanY + (mouse.y - panStartY)
+            if (isPanning) {
+                root.panX = lastPanX + (mouse.x - startX)
+                root.panY = lastPanY + (mouse.y - startY)
                 gridCanvas.requestPaint()
+            } else if (isBoxSelecting) {
+                boxSelectRect.x = Math.min(startX, mouse.x)
+                boxSelectRect.y = Math.min(startY, mouse.y)
+                boxSelectRect.width = Math.abs(mouse.x - startX)
+                boxSelectRect.height = Math.abs(mouse.y - startY)
+            }
+
+            if (root.connecting) {
+                var worldPt = root.screenToWorld(mouse.x, mouse.y)
+                root.connectCurrentX = worldPt.x
+                root.connectCurrentY = worldPt.y
+                 rubberBand.requestPaint()
+            }
+        }
+
+        onReleased: function(mouse) {
+            if (isPanning) {
+                isPanning = false
+                cursorShape = Qt.ArrowCursor
+            } else if (isBoxSelecting) {
+                isBoxSelecting = false
+                boxSelectRect.boxSelectActive = false
+                if (boxSelectRect.width > 5 || boxSelectRect.height > 5) {
+                    var topLeft = root.screenToWorld(boxSelectRect.x, boxSelectRect.y)
+                    var bottomRight = root.screenToWorld(
+                        boxSelectRect.x + boxSelectRect.width,
+                        boxSelectRect.y + boxSelectRect.height)
+                    var found = root.nodesInRect(topLeft.x, topLeft.y, bottomRight.x, bottomRight.y)
+                    if (found.length > 0) {
+                        root.selectedNodeIds = found
+                        root.selectedNodeId = found[found.length - 1]
+                        nodeSelected(root.selectedNodeId)
+                    }
+                }
+            }
+
+            if (root.connecting) {
+                root.cancelConnection()
             }
         }
     }
@@ -380,7 +396,18 @@ Item {
         property bool boxSelectActive: false
     }
 
-    // Rubber band for connection creation (bezier curve + arrow head)
+    property color connectColor: "#00B4FF"
+    onConnectingChanged: {
+        if (connecting && graphModel) {
+            var info = graphModel.qmlNodeInfo(connectSourceNodeId)
+            var isInput = (info.inputPorts || []).indexOf(connectSourcePort) >= 0
+            var type = graphModel.qmlPortType(connectSourceNodeId, connectSourcePort, isInput)
+            connectColor = graphModel.portTypeColor(type)
+        }
+        rubberBand.requestPaint()
+    }
+
+    // Rubber band for connection creation (bezier curve + dots at both ends)
     Canvas {
         id: rubberBand
         visible: root.connecting
@@ -391,29 +418,36 @@ Item {
             var ctx = getContext("2d")
             ctx.reset()
 
-            var sx = root.connectStartX
-            var sy = root.connectStartY
-            var ex = root.connectCurrentX
-            var ey = root.connectCurrentY
+            // Map world coordinates to screen space
+            // World coordinate (wx, wy) is at screen (panX + wx * zoom, panY + wy * zoom)
+            var sx = root.panX + root.connectStartX * root.zoom
+            var sy = root.panY + root.connectStartY * root.zoom
+            var ex = root.panX + root.connectCurrentX * root.zoom
+            var ey = root.panY + root.connectCurrentY * root.zoom
 
-            var dx = Math.max(60, Math.abs(ex - sx) * 0.5)
-            var angle = Math.atan2(ey - sy, ex - sx)
+            var dx = Math.max(80 * root.zoom, Math.abs(ex - sx) * 0.45)
 
             // Bezier curve
-            ctx.strokeStyle = "#00B4FF"
-            ctx.lineWidth = 2
+            ctx.strokeStyle = root.connectColor
+            ctx.lineWidth = 2 * root.zoom
+            ctx.lineCap = "round"
             ctx.beginPath()
             ctx.moveTo(sx, sy)
             ctx.bezierCurveTo(sx + dx, sy, ex - dx, ey, ex, ey)
             ctx.stroke()
 
-            // Arrow head
-            ctx.fillStyle = "#00B4FF"
+            // Dots at both ends
+            ctx.fillStyle = root.connectColor
+            var r = 6 * root.zoom
+            
+            // Start dot
             ctx.beginPath()
-            ctx.moveTo(ex, ey)
-            ctx.lineTo(ex - Math.cos(angle - 0.4) * 10, ey - Math.sin(angle - 0.4) * 10)
-            ctx.lineTo(ex - Math.cos(angle + 0.4) * 10, ey - Math.sin(angle + 0.4) * 10)
-            ctx.closePath()
+            ctx.arc(sx, sy, r, 0, Math.PI * 2)
+            ctx.fill()
+
+            // End dot
+            ctx.beginPath()
+            ctx.arc(ex, ey, r, 0, Math.PI * 2)
             ctx.fill()
         }
     }
@@ -439,20 +473,35 @@ Item {
         connecting = true
         connectSourceNodeId = nodeId
         connectSourcePort = portName
-        connectStartX = screenX
-        connectStartY = screenY
-        connectCurrentX = screenX
-        connectCurrentY = screenY
+        
+        // Use the shared layout logic to get the exact world center
+        var isInput = (graphModel.qmlNodeInfo(nodeId).inputPorts || []).indexOf(portName) >= 0
+        var wp = nodeLayout.getPortWorldPos(nodeId, portName, isInput)
+        connectStartX = wp.x
+        connectStartY = wp.y
+        connectCurrentX = wp.x
+        connectCurrentY = wp.y
     }
 
     function endConnection(nodeId, portName) {
         if (!connecting) return
         connecting = false
         if (connectSourceNodeId !== nodeId && graphModel) {
-            if (root.undoManager)
-                root.undoManager.qmlConnectPorts(connectSourceNodeId, connectSourcePort, nodeId, portName)
-            else
-                graphModel.qmlConnectPorts(connectSourceNodeId, connectSourcePort, nodeId, portName)
+            // Determine which is input and which is output
+            var srcIsInput = graphModel.qmlNodeInfo(connectSourceNodeId).inputPorts.indexOf(connectSourcePort) >= 0
+            var tgtIsInput = graphModel.qmlNodeInfo(nodeId).inputPorts.indexOf(portName) >= 0
+            
+            if (srcIsInput !== tgtIsInput) {
+                var outputNode = srcIsInput ? nodeId : connectSourceNodeId
+                var outputPort = srcIsInput ? portName : connectSourcePort
+                var inputNode = srcIsInput ? connectSourceNodeId : nodeId
+                var inputPort = srcIsInput ? connectSourcePort : portName
+                
+                if (root.undoManager)
+                    root.undoManager.qmlConnectPorts(outputNode, outputPort, inputNode, inputPort)
+                else
+                    graphModel.qmlConnectPorts(outputNode, outputPort, inputNode, inputPort)
+            }
         }
     }
 
@@ -476,7 +525,7 @@ Item {
             var nx = info.x || 0
             var ny = info.y || 0
             for (var j = 0; j < ports.length; j++) {
-                // Input ports sit at x+15, y+42 + idx*22
+                // Input ports sit at x+15, y+42 + idx*22 (matching Edge.qml corrected math)
                 var px = nx + 15
                 var py = ny + 42 + j * 22
                 var dx = worldX - px
@@ -491,7 +540,7 @@ Item {
         return closest
     }
 
-    onPanXChanged: gridCanvas.requestPaint()
-    onPanYChanged: gridCanvas.requestPaint()
-    onZoomChanged: gridCanvas.requestPaint()
+    onPanXChanged: { gridCanvas.requestPaint(); rubberBand.requestPaint() }
+    onPanYChanged: { gridCanvas.requestPaint(); rubberBand.requestPaint() }
+    onZoomChanged: { gridCanvas.requestPaint(); rubberBand.requestPaint() }
 }

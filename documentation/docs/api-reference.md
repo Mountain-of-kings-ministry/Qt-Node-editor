@@ -81,12 +81,14 @@ Triggered by `nodeDataChanged`, `nodeAdded`, and `edgeAdded` signals.
 | `qmlSetNodeData(nodeId, key, value)` | Set a node's data value |
 | `qmlConnectPorts(src, srcPort, tgt, tgtPort)` | Create an edge |
 | `qmlDisconnectEdge(edgeId)` | Remove an edge |
+| `qmlDisconnectPort(nodeId, portName, isInput)` | Remove all edges connected to a port |
 | `qmlEdgeIds()` | List all edge IDs |
 | `qmlEdgeInfo(edgeId)` | Get edge metadata as QVariantMap |
 | `qmlIsPortConnected(nodeId, port, isInput)` | Check if a port has a connection |
 | `qmlAllNodeTypes()` | List all registered node types (grouped by category order) |
 | `qmlCategories()` | List registered categories in registration order |
 | `qmlNodesInCategory(categoryId)` | List node types belonging to a category |
+| `portTypeColor(portType)` | Get hex color for a port type ID |
 | `qmlSaveToFile(path)` | Save graph to a file on disk (C++ QFile, no XMLHttpRequest) |
 | `qmlLoadFromFile(path)` | Load graph from a file on disk |
 | `clear()` | Remove all nodes and edges |
@@ -152,7 +154,7 @@ Visual representation of a graph node. Input TextFields become read-only when th
 **Properties**: `graphModel`, `undoManager`, `nodeId`, `nodeInfo`, `selected`
 
 ### Edge
-Visual connection between two ports (straight line + arrow head).
+Visual connection between two ports (Bézier curve with endpoint dot). Color matches the source port type.
 
 **Properties**: `graphModel`, `undoManager`, `edgeId`, `sourceNodeId`, `sourcePort`, `targetNodeId`, `targetPort`
 

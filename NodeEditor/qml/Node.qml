@@ -181,6 +181,7 @@ Item {
 
         MouseArea {
             anchors.fill: parent
+            propagateComposedEvents: true
             onClicked: function(mouse) {
                 var canvas = findCanvas()
                 if (!canvas) return
@@ -188,6 +189,7 @@ Item {
                     canvas.toggleNodeSelection(root.nodeId)
                 else
                     canvas.selectNode(root.nodeId)
+                mouse.accepted = false // Allow ports to see clicks too
             }
         }
 

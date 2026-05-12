@@ -397,6 +397,23 @@ void GraphModel::qmlDisconnectEdge(const QString &edgeId)
     disconnectEdge(strToUuid(edgeId));
 }
 
+void GraphModel::qmlDisconnectPort(const QString &nodeId, const QString &portName, bool isInput)
+{
+    QUuid id = strToUuid(nodeId);
+    QList<QUuid> toRemove;
+    for (const auto &e : m_edges) {
+        if (isInput) {
+            if (e.targetNodeId == id && e.targetPort == portName)
+                toRemove.append(e.id);
+        } else {
+            if (e.sourceNodeId == id && e.sourcePort == portName)
+                toRemove.append(e.id);
+        }
+    }
+    for (const auto &eid : toRemove)
+        disconnectEdge(eid);
+}
+
 QStringList GraphModel::qmlEdgeIds() const
 {
     QStringList ids;

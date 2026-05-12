@@ -44,7 +44,7 @@ Ports are typed connections between nodes. Each port has a color indicating its 
 - **Violet** - AudioBuffer
 
 ### Connections
-Edges carry data from output ports to input ports. Right-click an edge to delete it.
+Edges carry data from output ports to input ports. **Right-click an output port** to disconnect its wires.
 
 ### Data Flow
 The engine automatically propagates data changes through the graph. When you edit a node's input, all downstream nodes recompute.

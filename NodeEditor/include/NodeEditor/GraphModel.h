@@ -126,6 +126,7 @@ public:
     Q_INVOKABLE QString qmlConnectPorts(const QString &sourceNode, const QString &sourcePort,
                                         const QString &targetNode, const QString &targetPort);
     Q_INVOKABLE void qmlDisconnectEdge(const QString &edgeId);
+    Q_INVOKABLE void qmlDisconnectPort(const QString &nodeId, const QString &portName, bool isInput);
     Q_INVOKABLE QStringList qmlEdgeIds() const;
     Q_INVOKABLE QVariantMap qmlEdgeInfo(const QString &edgeId) const;
     Q_INVOKABLE QStringList qmlNodeInputPorts(const QString &nodeId) const;
@@ -143,7 +144,7 @@ public:
 
     // Static helpers
     static int portTypeToInt(PortType t);
-    static QString portTypeColor(int portType);
+    Q_INVOKABLE static QString portTypeColor(int portType);
     static QString portTypeName(int portType);
 
     // ID conversion (public for UndoManager use)
