@@ -1,7 +1,6 @@
 # Node Editor
 
-![Node Editor Screenshot](screen.png)
-
+![node editor screen shot](image.png)
 
 A Qt6/C++ node editor with inline display nodes, data-flow evaluation, and QML workspace.
 
