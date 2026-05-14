@@ -153,51 +153,6 @@ public:
 // File I/O
 // ══════════════════════════════════════════════════════════
 
-class ReadFileNode : public BaseNode {
-    Q_OBJECT
-public:
-    QString nodeType() const override { return "data/file/read"; }
-    QString nodeName() const override { return "Read File"; }
-    QString nodeCategory() const override { return "Data"; }
-    QString nodeSubCategory() const override { return "File I/O"; }
-    QString displayColor() const override { return "#00CEC9"; }
-    QList<PortInfo> inputSpec() const override {
-        return {{PortType::String, "path", QVariant("")}};
-    }
-    QList<PortInfo> outputSpec() const override {
-        return {{PortType::String, "content", QVariant()}, {PortType::Bool, "success", QVariant()}};
-    }
-    QVariantMap compute(const QVariantMap &inputs) override {
-        QFile f(inputs.value("path").toString());
-        if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
-            return {{"content", QString()}, {"success", false}};
-        return {{"content", QString::fromUtf8(f.readAll())}, {"success", true}};
-    }
-};
-
-class WriteFileNode : public BaseNode {
-    Q_OBJECT
-public:
-    QString nodeType() const override { return "data/file/write"; }
-    QString nodeName() const override { return "Write File"; }
-    QString nodeCategory() const override { return "Data"; }
-    QString nodeSubCategory() const override { return "File I/O"; }
-    QString displayColor() const override { return "#00CEC9"; }
-    QList<PortInfo> inputSpec() const override {
-        return {{PortType::String, "path", QVariant("")}, {PortType::String, "content", QVariant("")}};
-    }
-    QList<PortInfo> outputSpec() const override {
-        return {{PortType::Bool, "success", QVariant()}};
-    }
-    QVariantMap compute(const QVariantMap &inputs) override {
-        QFile f(inputs.value("path").toString());
-        if (!f.open(QIODevice::WriteOnly | QIODevice::Text))
-            return {{"success", false}};
-        f.write(inputs.value("content").toString().toUtf8());
-        return {{"success", true}};
-    }
-};
-
 class CSVParseNode : public BaseNode {
     Q_OBJECT
 public:
@@ -235,8 +190,6 @@ inline void registerDataNodeTypes(GraphModel *model)
     registerNodeType<JSONArrayNode>(model, "Data");
     registerNodeType<SerializeObjectNode>(model, "Data");
     registerNodeType<DeserializeObjectNode>(model, "Data");
-    registerNodeType<ReadFileNode>(model, "Data");
-    registerNodeType<WriteFileNode>(model, "Data");
     registerNodeType<CSVParseNode>(model, "Data");
 }
 

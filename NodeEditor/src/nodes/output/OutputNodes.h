@@ -122,26 +122,6 @@ public:
     }
 };
 
-class FileWriterNode : public BaseNode {
-    Q_OBJECT
-public:
-    QString nodeType() const override { return "output/data/fileWriter"; }
-    QString nodeName() const override { return "File Writer"; }
-    QString nodeCategory() const override { return "Output"; }
-    QString nodeSubCategory() const override { return "Data"; }
-    QString displayColor() const override { return "#6C5CE7"; }
-    QList<PortInfo> inputSpec() const override {
-        return {{PortType::String, "path", QVariant("output.txt")},
-                {PortType::String, "content", QVariant("")}};
-    }
-    QList<PortInfo> outputSpec() const override {
-        return {{PortType::Bool, "success", QVariant()}};
-    }
-    QVariantMap compute(const QVariantMap &) override {
-        return {{"success", true}};
-    }
-};
-
 class JSONExportNode : public BaseNode {
     Q_OBJECT
 public:
@@ -964,7 +944,6 @@ inline void registerOutputNodeTypes(GraphModel *model)
     registerNodeType<VideoOutputNode>(model, "Output");
     registerNodeType<ViewportOutputNode>(model, "Output");
     registerNodeType<PixelBufferOutputNode>(model, "Output");
-    registerNodeType<FileWriterNode>(model, "Output");
     registerNodeType<JSONExportNode>(model, "Output");
     registerNodeType<PrintNode>(model, "Output");
     registerNodeType<LoggerNode>(model, "Output");

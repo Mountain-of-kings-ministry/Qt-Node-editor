@@ -147,6 +147,9 @@ public:
     Q_INVOKABLE static QString portTypeColor(int portType);
     static QString portTypeName(int portType);
 
+    // Screen color picker for eyedropper tool
+    Q_INVOKABLE static QString qmlScreenColorAt(int x, int y);
+
     // ID conversion (public for UndoManager use)
     static QString uuidToStr(const QUuid &id);
     static QUuid strToUuid(const QString &str);

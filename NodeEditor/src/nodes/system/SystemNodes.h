@@ -7,6 +7,7 @@
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QFile>
+#include <QDir>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
@@ -114,6 +115,145 @@ public:
     }
 };
 
+// ══════════════════════════════════════════════════════════
+// File I/O
+// ══════════════════════════════════════════════════════════
+
+class ReadFileNode : public BaseNode {
+    Q_OBJECT
+public:
+    QString nodeType() const override { return "system/file/read"; }
+    QString nodeName() const override { return "Read File"; }
+    QString nodeCategory() const override { return "System"; }
+    QString nodeSubCategory() const override { return "File I/O"; }
+    QString displayColor() const override { return "#00CEC9"; }
+    QList<PortInfo> inputSpec() const override {
+        return {{PortType::String, "path", QVariant("")}};
+    }
+    QList<PortInfo> outputSpec() const override {
+        return {{PortType::String, "content", QVariant()}, {PortType::Bool, "success", QVariant()}};
+    }
+    QVariantMap compute(const QVariantMap &inputs) override {
+        QFile f(inputs.value("path").toString());
+        if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
+            return {{"content", QString()}, {"success", false}};
+        return {{"content", QString::fromUtf8(f.readAll())}, {"success", true}};
+    }
+};
+
+class WriteFileNode : public BaseNode {
+    Q_OBJECT
+public:
+    QString nodeType() const override { return "system/file/write"; }
+    QString nodeName() const override { return "Write File"; }
+    QString nodeCategory() const override { return "System"; }
+    QString nodeSubCategory() const override { return "File I/O"; }
+    QString displayColor() const override { return "#00CEC9"; }
+    QList<PortInfo> inputSpec() const override {
+        return {{PortType::String, "path", QVariant("")}, {PortType::String, "content", QVariant("")}};
+    }
+    QList<PortInfo> outputSpec() const override {
+        return {{PortType::Bool, "success", QVariant()}};
+    }
+    QVariantMap compute(const QVariantMap &inputs) override {
+        QFile f(inputs.value("path").toString());
+        if (!f.open(QIODevice::WriteOnly | QIODevice::Text))
+            return {{"success", false}};
+        f.write(inputs.value("content").toString().toUtf8());
+        return {{"success", true}};
+    }
+};
+
+class FileWriterNode : public BaseNode {
+    Q_OBJECT
+public:
+    QString nodeType() const override { return "system/file/fileWriter"; }
+    QString nodeName() const override { return "File Writer"; }
+    QString nodeCategory() const override { return "System"; }
+    QString nodeSubCategory() const override { return "File I/O"; }
+    QString displayColor() const override { return "#00CEC9"; }
+    QList<PortInfo> inputSpec() const override {
+        return {{PortType::String, "path", QVariant("output.txt")},
+                {PortType::String, "content", QVariant("")}};
+    }
+    QList<PortInfo> outputSpec() const override {
+        return {{PortType::Bool, "success", QVariant()}};
+    }
+    QVariantMap compute(const QVariantMap &inputs) override {
+        QFile f(inputs.value("path").toString());
+        if (!f.open(QIODevice::WriteOnly | QIODevice::Text))
+            return {{"success", false}};
+        f.write(inputs.value("content").toString().toUtf8());
+        f.close();
+        return {{"success", true}};
+    }
+};
+
+class JsonInputNode : public BaseNode {
+    Q_OBJECT
+public:
+    QString nodeType() const override { return "system/file/jsonInput"; }
+    QString nodeName() const override { return "JSON Input"; }
+    QString nodeCategory() const override { return "System"; }
+    QString nodeSubCategory() const override { return "File I/O"; }
+    QString displayColor() const override { return "#00CEC9"; }
+    QList<PortInfo> inputSpec() const override {
+        return {{PortType::String, "filePath", QVariant("")}};
+    }
+    QList<PortInfo> outputSpec() const override {
+        return {{PortType::Generic, "output", QVariant()}};
+    }
+    QVariantMap compute(const QVariantMap &inputs) override {
+        QVariantMap out;
+        QString filePath = inputs.value("filePath").toString().trimmed();
+        if (filePath.isEmpty()) {
+            out["output"] = QVariant();
+            return out;
+        }
+        QFile file(filePath);
+        if (!file.open(QIODevice::ReadOnly)) {
+            qWarning() << "JsonInputNode: cannot open file:" << filePath;
+            out["output"] = QVariant();
+            return out;
+        }
+        QByteArray data = file.readAll();
+        file.close();
+        QJsonParseError err;
+        QJsonDocument doc = QJsonDocument::fromJson(data, &err);
+        if (err.error != QJsonParseError::NoError) {
+            qWarning() << "JsonInputNode: JSON parse error:" << err.errorString();
+            out["output"] = QString::fromUtf8(data);
+            return out;
+        }
+        if (doc.isObject())
+            out["output"] = doc.object().toVariantMap();
+        else if (doc.isArray())
+            out["output"] = doc.array().toVariantList();
+        else
+            out["output"] = QString::fromUtf8(data);
+        return out;
+    }
+};
+
+class FolderSelectorNode : public BaseNode {
+    Q_OBJECT
+public:
+    QString nodeType() const override { return "system/file/folderSelector"; }
+    QString nodeName() const override { return "Folder Selector"; }
+    QString nodeCategory() const override { return "System"; }
+    QString nodeSubCategory() const override { return "File I/O"; }
+    QString displayColor() const override { return "#00CEC9"; }
+    QList<PortInfo> inputSpec() const override {
+        return {{PortType::String, "folderPath", QVariant("")}};
+    }
+    QList<PortInfo> outputSpec() const override {
+        return {{PortType::String, "folderPath", QVariant()}};
+    }
+    QVariantMap compute(const QVariantMap &inputs) override {
+        return {{"folderPath", inputs.value("folderPath").toString()}};
+    }
+};
+
 // CanvasNode: loads a sub-graph JSON file and outputs parsed structure
 class CanvasNode : public BaseNode {
     Q_OBJECT
@@ -167,6 +307,17 @@ public:
     QString displayColor() const override { return "#00CEC9"; }
 };
 
+inline void registerFileNodeTypes(GraphModel *model)
+{
+    if (!model) return;
+    model->registerCategory({"System", "System", QColor("#636E72")});
+    registerNodeType<ReadFileNode>(model, "System");
+    registerNodeType<WriteFileNode>(model, "System");
+    registerNodeType<FileWriterNode>(model, "System");
+    registerNodeType<JsonInputNode>(model, "System");
+    registerNodeType<FolderSelectorNode>(model, "System");
+}
+
 inline void registerSystemNodeTypes(GraphModel *model)
 {
     if (!model) return;
@@ -178,6 +329,7 @@ inline void registerSystemNodeTypes(GraphModel *model)
     registerNodeType<ClipboardNode>(model, "System");
     registerNodeType<ProcessExecuteNode>(model, "System");
     registerNodeType<CanvasNode>(model, "SubGraph");
+    registerFileNodeTypes(model);
 }
 
 } // namespace NodeEditor

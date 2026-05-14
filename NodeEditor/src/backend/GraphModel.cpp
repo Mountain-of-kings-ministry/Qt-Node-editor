@@ -4,6 +4,9 @@
 #include <QJsonArray>
 #include <QFile>
 #include <QSet>
+#include <QPixmap>
+#include <QScreen>
+#include <QGuiApplication>
 #include <algorithm>
 
 namespace NodeEditor {
@@ -658,6 +661,17 @@ QString GraphModel::portTypeName(int portType)
     case PortType::AudioBuffer: return "Audio Buffer";
     }
     return "Unknown";
+}
+
+QString GraphModel::qmlScreenColorAt(int x, int y)
+{
+    QScreen *screen = QGuiApplication::screenAt(QPoint(x, y));
+    if (!screen) screen = QGuiApplication::primaryScreen();
+    if (!screen) return "#00000000";
+    QPixmap screenshot = screen->grabWindow(0);
+    QPoint topLeft = screen->geometry().topLeft();
+    QColor color = screenshot.toImage().pixelColor(x - topLeft.x(), y - topLeft.y());
+    return color.name(QColor::HexArgb);
 }
 
 // ── Serialization ───────────────────────────────────────────
