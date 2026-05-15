@@ -9,6 +9,25 @@ namespace NodeEditor {
 // Color Basics
 // ══════════════════════════════════════════════════════════
 
+class ColorNode : public BaseNode {
+    Q_OBJECT
+public:
+    QString nodeType() const override { return "color/basics/color"; }
+    QString nodeName() const override { return "Color"; }
+    QString nodeCategory() const override { return "Color"; }
+    QString nodeSubCategory() const override { return "Basics"; }
+    QString displayColor() const override { return "#A29BFE"; }
+    QList<PortInfo> inputSpec() const override {
+        return {{PortType::Color, "color", QVariant::fromValue(QColor(Qt::white))}};
+    }
+    QList<PortInfo> outputSpec() const override {
+        return {{PortType::Color, "color", QVariant()}};
+    }
+    QVariantMap compute(const QVariantMap &inputs) override {
+        return {{"color", inputs.value("color")}};
+    }
+};
+
 class RGBColorNode : public BaseNode {
     Q_OBJECT
 public:
@@ -66,13 +85,13 @@ public:
     QString nodeSubCategory() const override { return "Basics"; }
     QString displayColor() const override { return "#A29BFE"; }
     QList<PortInfo> inputSpec() const override {
-        return {{PortType::String, "hex", QVariant("#FFFFFF")}};
+        return {{PortType::Color, "color", QVariant::fromValue(QColor(Qt::white))}};
     }
     QList<PortInfo> outputSpec() const override {
         return {{PortType::Color, "color", QVariant()}};
     }
     QVariantMap compute(const QVariantMap &inputs) override {
-        return {{"color", QColor(inputs.value("hex").toString())}};
+        return {{"color", inputs.value("color")}};
     }
 };
 
@@ -85,13 +104,13 @@ public:
     QString nodeSubCategory() const override { return "Basics"; }
     QString displayColor() const override { return "#A29BFE"; }
     QList<PortInfo> inputSpec() const override {
-        return {{PortType::String, "name", QVariant("red")}};
+        return {{PortType::Color, "color", QVariant::fromValue(QColor(Qt::red))}};
     }
     QList<PortInfo> outputSpec() const override {
         return {{PortType::Color, "color", QVariant()}};
     }
     QVariantMap compute(const QVariantMap &inputs) override {
-        return {{"color", QColor(inputs.value("name").toString())}};
+        return {{"color", inputs.value("color")}};
     }
 };
 
@@ -405,6 +424,7 @@ inline void registerColorNodeTypes(GraphModel *model)
 {
     if (!model) return;
     model->registerCategory({"Color", "Color", QColor("#A29BFE")});
+    registerNodeType<ColorNode>(model, "Color");
     registerNodeType<RGBColorNode>(model, "Color");
     registerNodeType<HSVColorNode>(model, "Color");
     registerNodeType<HexColorNode>(model, "Color");

@@ -15,6 +15,7 @@ Item {
 
     property bool _isDisplayNode: false
     property int _dataVersion: 0
+    property int _connectionVersion: 0
 
     function truncate(val) {
         if (val === undefined || val === null) return ""
@@ -78,6 +79,15 @@ Item {
         function onQmlNodePositionChanged(id) {
             if (id === root.nodeId)
                 root.nodeInfo = graphModel.qmlNodeInfo(root.nodeId)
+        }
+        function onQmlEdgeAdded(id) {
+            if (!root.graphModel) return
+            var info = root.graphModel.qmlEdgeInfo(id)
+            if (info && (info.targetNodeId === root.nodeId || info.sourceNodeId === root.nodeId))
+                root._connectionVersion++
+        }
+        function onQmlEdgeRemoved(id) {
+            root._connectionVersion++
         }
     }
 
@@ -179,7 +189,7 @@ Item {
                             anchors.verticalCenter: parent.verticalCenter
                             width: 64
                             height: 20
-                            visible: propDelegate.isColorPort
+                            visible: propDelegate.isColorPort && (root._connectionVersion, root.graphModel ? !root.graphModel.qmlIsPortConnected(root.nodeId, modelData, true) : true)
 
                             Rectangle {
                                 id: propColorSwatch
@@ -308,13 +318,18 @@ Item {
                                 }
                                 font.pixelSize: 10
                                 padding: 2
-                                visible: !propDelegate.isFilePathPort
+                                visible: !propDelegate.isFilePathPort && (root._connectionVersion, root.graphModel ? !root.graphModel.qmlIsPortConnected(root.nodeId, modelData, true) : true)
 
                                 text: {
                                     if (!root.graphModel) return ""
                                     root._dataVersion
                                     var val = root.graphModel.qmlNodeData(root.nodeId, modelData)
                                     return val !== undefined && val !== null ? String(val) : ""
+                                }
+
+                                readOnly: {
+                                    root._connectionVersion
+                                    root.graphModel ? root.graphModel.qmlIsPortConnected(root.nodeId, modelData, true) : false
                                 }
 
                                 onActiveFocusChanged: {
@@ -336,7 +351,7 @@ Item {
                                 color: "#FFFFFF"
                                 font.pixelSize: 10
                                 text: root.truncate(propInputField.text)
-                                visible: !propInputField.activeFocus && !propDelegate.isFilePathPort
+                                visible: !propInputField.activeFocus && !propDelegate.isFilePathPort && (root._connectionVersion, root.graphModel ? !root.graphModel.qmlIsPortConnected(root.nodeId, modelData, true) : true)
                                 clip: true
                             }
                         }
@@ -398,8 +413,8 @@ Item {
         property real pickerVal: 1.0
         property real pickerAlpha: 1.0
 
-        width: 260
-        height: 420
+        width: 320
+        height: 480
         x: (parent.width - width) / 2
         y: (parent.height - height) / 2
 
@@ -425,248 +440,315 @@ Item {
         }
 
         background: Rectangle {
-            color: "#2A2A2A"
-            radius: 8
-            border.color: "#555555"
+            color: "#252525"
+            radius: 10
+            border.color: "#444"
             border.width: 1
         }
 
         ColumnLayout {
             anchors.fill: parent
-            anchors.margins: 10
-            spacing: 8
+            anchors.margins: 15
+            spacing: 12
 
-            Item {
-                Layout.preferredWidth: 220
-                Layout.preferredHeight: 220
-                Layout.alignment: Qt.AlignHCenter
+            Text {
+                text: "PICK COLOR"
+                color: "#888"
+                font.pixelSize: 10
+                font.bold: true
+                Layout.alignment: Qt.AlignLeft
+            }
 
-                Canvas {
-                    id: propWheelCanvas
-                    anchors.fill: parent
-                    antialiasing: true
-                    property real wheelVal: propColorPickerPopup.pickerVal
+            // Side-by-side: Wheel and Alpha/Eyedropper
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 15
+                Layout.alignment: Qt.AlignTop
 
-                    onWheelValChanged: requestPaint()
+                // Left: Hue/Saturation Wheel
+                Item {
+                    id: propWheelArea
+                    Layout.preferredWidth: 220
+                    Layout.preferredHeight: 220
+                    Layout.alignment: Qt.AlignTop
 
-                    onPaint: {
-                        var ctx = getContext("2d")
-                        var w = width, h = height
-                        var cx = w / 2, cy = h / 2
-                        var r = Math.min(cx, cy) - 1
-                        var val = propColorPickerPopup.pickerVal
+                    Canvas {
+                        id: propWheelCanvas
+                        anchors.fill: parent
+                        antialiasing: true
+                        property real wheelVal: propColorPickerPopup.pickerVal
 
-                        ctx.clearRect(0, 0, w, h)
-                        ctx.save()
-                        ctx.beginPath()
-                        ctx.arc(cx, cy, r, 0, 2 * Math.PI)
-                        ctx.clip()
+                        onWheelValChanged: requestPaint()
 
-                        var steps = 360
-                        for (var i = 0; i < steps; i++) {
-                            var hue = i / steps
-                            var a0 = 2 * Math.PI * i / steps - Math.PI / 2
-                            var a1 = 2 * Math.PI * (i + 1) / steps - Math.PI / 2
+                        onPaint: {
+                            var ctx = getContext("2d")
+                            var w = width, h = height
+                            var cx = w / 2, cy = h / 2
+                            var r = Math.min(cx, cy) - 2
+                            var val = propColorPickerPopup.pickerVal
 
+                            ctx.clearRect(0, 0, w, h)
+                            
+                            // Draw hue circle
+                            for (var i = 0; i < 360; i += 1) {
+                                var hue = i / 360
+                                var a0 = i * Math.PI / 180 - Math.PI / 2 - 0.01
+                                var a1 = (i + 1) * Math.PI / 180 - Math.PI / 2 + 0.01
+
+                                ctx.beginPath()
+                                ctx.moveTo(cx, cy)
+                                ctx.arc(cx, cy, r, a0, a1)
+                                ctx.fillStyle = Qt.hsva(hue, 1, val, 1)
+                                ctx.fill()
+                            }
+
+                            // Draw saturation gradient (center is white)
+                            var satGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r)
+                            satGrad.addColorStop(0, "white")
+                            satGrad.addColorStop(1, "transparent")
+                            ctx.fillStyle = satGrad
                             ctx.beginPath()
-                            ctx.moveTo(cx, cy)
-                            ctx.arc(cx, cy, r, a0, a1)
-                            ctx.closePath()
-                            ctx.fillStyle = Qt.hsva(hue, 1, val, 1)
+                            ctx.arc(cx, cy, r, 0, 2 * Math.PI)
                             ctx.fill()
                         }
 
-                        var satGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r)
-                        satGrad.addColorStop(0, Qt.rgba(1, 1, 1, 1))
-                        satGrad.addColorStop(1, Qt.rgba(1, 1, 1, 0))
-                        ctx.fillStyle = satGrad
-                        ctx.fillRect(0, 0, w, h)
-
-                        ctx.restore()
+                        MouseArea {
+                            anchors.fill: parent
+                            function pickColor(mx, my) {
+                                var dx = mx - width / 2
+                                var dy = my - height / 2
+                                var dist = Math.sqrt(dx * dx + dy * dy)
+                                var maxR = width / 2 - 2
+                                
+                                var angle = Math.atan2(dy, dx) + Math.PI / 2
+                                if (angle < 0) angle += 2 * Math.PI
+                                
+                                propColorPickerPopup.pickerHue = angle / (2 * Math.PI)
+                                propColorPickerPopup.pickerSat = Math.min(1.0, dist / maxR)
+                            }
+                            onPressed: pickColor(mouseX, mouseY)
+                            onPositionChanged: pickColor(mouseX, mouseY)
+                        }
                     }
 
-                    MouseArea {
-                        anchors.fill: parent
-                        onPressed: pickColor(mouseX, mouseY)
-                        onPositionChanged: pickColor(mouseX, mouseY)
-                        function pickColor(mx, my) {
-                            var cx = mx / width, cy = my / height
-                            var dx = cx - 0.5, dy = cy - 0.5
-                            var dist = Math.sqrt(dx * dx + dy * dy) * 2.0
-                            if (dist > 1.0) return
-                            var angle = Math.atan2(dy, dx) / (2 * Math.PI) + 0.5
-                            if (angle < 0) angle += 1.0
-                            propColorPickerPopup.pickerHue = angle
-                            propColorPickerPopup.pickerSat = dist
+                    // Indicator for H/S
+                    Rectangle {
+                        property real angle: propColorPickerPopup.pickerHue * 2 * Math.PI - Math.PI / 2
+                        property real pickDist: propColorPickerPopup.pickerSat * (parent.width / 2 - 2)
+                        x: parent.width / 2 + Math.cos(angle) * pickDist - 8
+                        y: parent.height / 2 + Math.sin(angle) * pickDist - 8
+                        width: 16
+                        height: 16
+                        radius: 8
+                        color: "transparent"
+                        border.color: "white"
+                        border.width: 2
+                        
+                        Rectangle {
+                            anchors.fill: parent
+                            anchors.margins: 2
+                            radius: 6
+                            color: "transparent"
+                            border.color: "black"
+                            border.width: 1
                         }
                     }
                 }
 
-                Rectangle {
-                    x: parent.width / 2 + Math.cos(2 * Math.PI * propColorPickerPopup.pickerHue - Math.PI) * (parent.width / 2 - 10) - 7
-                    y: parent.height / 2 + Math.sin(2 * Math.PI * propColorPickerPopup.pickerHue - Math.PI) * (parent.height / 2 - 10) - 7
-                    width: 14; height: 14; radius: 7
-                    border.color: "#FFFFFF"; border.width: 2
-                    color: "transparent"
-                }
+                // Right: Alpha Slider and Eyedropper
+                ColumnLayout {
+                    Layout.fillHeight: true
+                    spacing: 12
+                    Layout.alignment: Qt.AlignTop
 
-                Rectangle {
-                    x: parent.width / 2 + Math.cos(2 * Math.PI * propColorPickerPopup.pickerHue - Math.PI) * (parent.width / 2) * propColorPickerPopup.pickerSat - 4
-                    y: parent.height / 2 + Math.sin(2 * Math.PI * propColorPickerPopup.pickerHue - Math.PI) * (parent.height / 2) * propColorPickerPopup.pickerSat - 4
-                    width: 8; height: 8; radius: 4
-                    border.color: "#FFFFFF"; border.width: 1.5
-                    color: Qt.hsva(propColorPickerPopup.pickerHue, propColorPickerPopup.pickerSat, propColorPickerPopup.pickerVal, 1.0)
+                    // Alpha Slider (Vertical)
+                    Item {
+                        id: propAlphaBar
+                        Layout.preferredWidth: 32
+                        Layout.fillHeight: true
+                        Layout.minimumHeight: 176
+
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: 4
+                            clip: true
+                            border.color: "#444"
+                            
+                            // Checkerboard
+                            Grid {
+                                anchors.fill: parent
+                                columns: 2
+                                Repeater {
+                                    model: 22
+                                    Rectangle { width: 16; height: 16; color: index % 2 === (Math.floor(index/2)%2) ? "#333" : "#444" }
+                                }
+                            }
+
+                            Rectangle {
+                                anchors.fill: parent
+                                radius: 4
+                                gradient: Gradient {
+                                    GradientStop { position: 0.0; color: Qt.hsva(propColorPickerPopup.pickerHue, propColorPickerPopup.pickerSat, propColorPickerPopup.pickerVal, 1.0) }
+                                    GradientStop { position: 1.0; color: "transparent" }
+                                }
+                            }
+
+                            // Handle
+                            Rectangle {
+                                width: parent.width + 4
+                                height: 8
+                                x: -2
+                                y: (1.0 - propColorPickerPopup.pickerAlpha) * (parent.height - 8)
+                                color: "white"
+                                radius: 2
+                                border.color: "black"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                function updateAlpha(my) {
+                                    propColorPickerPopup.pickerAlpha = 1.0 - Math.max(0, Math.min(1, my / height))
+                                }
+                                onPressed: updateAlpha(mouseY)
+                                onPositionChanged: updateAlpha(mouseY)
+                            }
+                        }
+                    }
+
+                    // Eye Drop Button (Small square)
+                    Button {
+                        id: propEyeDropperBtn
+                        Layout.preferredWidth: 32
+                        Layout.preferredHeight: 32
+                        padding: 0
+                        
+                        background: Rectangle {
+                            color: propEyeDropperBtn.hovered ? "#444" : "#333"
+                            radius: 4
+                            border.color: "#555"
+                            
+                            Text {
+                                anchors.centerIn: parent
+                                text: "\u2316"
+                                color: "white"
+                                font.pixelSize: 18
+                            }
+                        }
+
+                        onClicked: {
+                            propColorPickerPopup.close()
+                            Qt.callLater(function() {
+                                var overlayParent = Overlay.overlay
+                                if (!overlayParent) return
+                                var overlay = propEyedropperOverlayComp.createObject(overlayParent, {
+                                    onPicked: function(screenX, screenY) {
+                                        if (root.graphModel) {
+                                            var hexStr = root.graphModel.qmlScreenColorAt(screenX, screenY)
+                                            if (hexStr) {
+                                                var hsva = root.colorToHsva(hexStr)
+                                                propColorPickerPopup.pickerHue = hsva.x
+                                                propColorPickerPopup.pickerSat = hsva.y
+                                                propColorPickerPopup.pickerVal = hsva.z
+                                                propColorPickerPopup.pickerAlpha = hsva.w
+                                            }
+                                        }
+                                        propColorPickerPopup.open()
+                                    },
+                                    onCancelled: function() {
+                                        propColorPickerPopup.open()
+                                    }
+                                })
+                            })
+                        }
+                    }
                 }
             }
 
-            RowLayout {
-                Layout.fillWidth: true; spacing: 6
-                Text { text: "V"; color: "#CCCCCC"; font.pixelSize: 11; font.bold: true; Layout.alignment: Qt.AlignVCenter }
+            // Value / Brightness Slider (Horizontal)
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 4
 
                 Rectangle {
-                    Layout.fillWidth: true; Layout.preferredHeight: 16; radius: 3; clip: true
-
-                    Rectangle {
-                        anchors.fill: parent; radius: 3
-                        gradient: Gradient {
-                            GradientStop { position: 0.0; color: Qt.hsva(propColorPickerPopup.pickerHue, propColorPickerPopup.pickerSat, 0.0, 1.0) }
-                            GradientStop { position: 1.0; color: Qt.hsva(propColorPickerPopup.pickerHue, propColorPickerPopup.pickerSat, 1.0, 1.0) }
-                        }
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 18
+                    radius: 4
+                    border.color: "#444"
+                    gradient: Gradient {
+                        orientation: Gradient.Horizontal
+                        GradientStop { position: 0.0; color: "black" }
+                        GradientStop { position: 1.0; color: Qt.hsva(propColorPickerPopup.pickerHue, propColorPickerPopup.pickerSat, 1.0, 1.0) }
                     }
 
                     Rectangle {
-                        x: (parent.width - 6) * propColorPickerPopup.pickerVal
-                        y: 0; width: 6; height: parent.height; color: "white"; radius: 1
+                        width: 10
+                        height: parent.height + 4
+                        anchors.verticalCenter: parent.verticalCenter
+                        x: propColorPickerPopup.pickerVal * (parent.width - 10)
+                        color: "white"
+                        radius: 2
+                        border.color: "black"
                     }
 
                     MouseArea {
                         anchors.fill: parent
-                        onPressed: updateVal(mouseX)
-                        onPositionChanged: updateVal(mouseX)
                         function updateVal(mx) {
                             propColorPickerPopup.pickerVal = Math.max(0, Math.min(1, mx / width))
                         }
+                        onPressed: updateVal(mouseX)
+                        onPositionChanged: updateVal(mouseX)
                     }
                 }
-            }
-
-            // Opacity slider
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 6
-
+                
                 Text {
-                    text: "A"
-                    color: "#CCCCCC"
-                    font.pixelSize: 11
+                    text: "BRIGHTNESS"
+                    color: "#666"
+                    font.pixelSize: 9
                     font.bold: true
-                    Layout.alignment: Qt.AlignVCenter
-                }
-
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 16
-                    radius: 3
-                    clip: true
-
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: 3
-                        gradient: Gradient {
-                            GradientStop { position: 0.0; color: Qt.hsva(propColorPickerPopup.pickerHue, propColorPickerPopup.pickerSat, propColorPickerPopup.pickerVal, 0.0) }
-                            GradientStop { position: 1.0; color: Qt.hsva(propColorPickerPopup.pickerHue, propColorPickerPopup.pickerSat, propColorPickerPopup.pickerVal, 1.0) }
-                        }
-                    }
-
-                    Rectangle {
-                        x: (parent.width - 6) * propColorPickerPopup.pickerAlpha
-                        y: 0
-                        width: 6
-                        height: parent.height
-                        color: "white"
-                        radius: 1
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        onPressed: updateA(mouseX)
-                        onPositionChanged: updateA(mouseX)
-                        function updateA(mx) {
-                            propColorPickerPopup.pickerAlpha = Math.max(0, Math.min(1, mx / width))
-                        }
-                    }
+                    Layout.alignment: Qt.AlignHCenter
                 }
             }
 
-            // Eyedropper + Color preview row
+            // Hex Display and Preview
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 8
-
-                Button {
-                    id: propEyeDropperBtn
-                    text: "\uD83D\uDD76"
-                    flat: true
-                    Layout.preferredWidth: 32
-                    Layout.preferredHeight: 32
-                    font.pixelSize: 16
-                    ToolTip {
-                        text: "Pick color from screen"
-                        visible: parent.hovered
-                        delay: 500
-                    }
-                    background: Rectangle {
-                        color: parent.hovered ? "#3A3A3A" : "#2A2A2A"
-                        radius: 4
-                        border.color: "#555555"
-                        border.width: 1
-                    }
-
-                    onClicked: {
-                        propColorPickerPopup.close()
-                        Qt.callLater(function() {
-                            var overlayParent = Overlay.overlay
-                            if (!overlayParent) return
-                            var overlay = propEyedropperOverlayComp.createObject(overlayParent, {
-                                onPicked: function(screenX, screenY) {
-                                    if (root.graphModel) {
-                                        var hexStr = root.graphModel.qmlScreenColorAt(screenX, screenY)
-                                        if (hexStr) {
-                                            var hsva = root.colorToHsva(hexStr)
-                                            propColorPickerPopup.pickerHue = hsva.x
-                                            propColorPickerPopup.pickerSat = hsva.y
-                                            propColorPickerPopup.pickerVal = hsva.z
-                                            propColorPickerPopup.pickerAlpha = hsva.w
-                                        }
-                                    }
-                                    propColorPickerPopup.open()
-                                },
-                                onCancelled: function() {
-                                    propColorPickerPopup.open()
-                                }
-                            })
-                        })
-                    }
-                }
+                spacing: 12
 
                 Rectangle {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 32
+                    Layout.preferredHeight: 36
+                    color: "#151515"
                     radius: 4
-                    border.color: "#555555"
-                    border.width: 1
-                    clip: true
+                    border.color: "#333"
+                    
+                    TextInput {
+                        anchors.centerIn: parent
+                        text: {
+                            var c = Qt.hsva(propColorPickerPopup.pickerHue, propColorPickerPopup.pickerSat, propColorPickerPopup.pickerVal, propColorPickerPopup.pickerAlpha)
+                            return String(c).toUpperCase()
+                        }
+                        color: "white"
+                        font.family: "monospace"
+                        font.pixelSize: 14
+                        readOnly: true
+                        selectByMouse: true
+                    }
+                }
 
-                    // Checkerboard background for alpha
-                    Row {
+                // Color Preview with Checkerboard
+                Rectangle {
+                    Layout.preferredWidth: 80
+                    Layout.preferredHeight: 36
+                    radius: 4
+                    border.color: "#333"
+                    clip: true
+                    
+                    Grid {
                         anchors.fill: parent
+                        columns: 5
                         Repeater {
-                            model: 8
-                            Rectangle {
-                                width: parent.width / 8
-                                height: parent.height
-                                color: (index % 2 === 0) ? "#CCCCCC" : "#FFFFFF"
-                            }
+                            model: 15
+                            Rectangle { width: 16; height: 18; color: (Math.floor(index/5) + index) % 2 === 0 ? "#333" : "#444" }
                         }
                     }
 
@@ -677,14 +759,44 @@ Item {
                 }
             }
 
+            // Bottom Labels (matching SVG label placement)
+            Text {
+                text: "HUE AND SATURATION"
+                color: "#666"
+                font.pixelSize: 9
+                font.bold: true
+                Layout.alignment: Qt.AlignLeft
+                Layout.leftMargin: 40 // Align roughly with wheel
+            }
+
             // Buttons
             RowLayout {
-                Layout.alignment: Qt.AlignRight; spacing: 8
-
-                Button { text: "Cancel"; flat: true; onClicked: propColorPickerPopup.close() }
+                Layout.fillWidth: true
+                spacing: 12
+                Layout.topMargin: 5
 
                 Button {
-                    text: "OK"; highlighted: true
+                    text: "Cancel"
+                    Layout.fillWidth: true
+                    onClicked: propColorPickerPopup.close()
+                    background: Rectangle {
+                        color: parent.down ? "#222" : (parent.hovered ? "#333" : "#2A2A2A")
+                        radius: 4
+                        border.color: "#444"
+                    }
+                    contentItem: Text {
+                        text: parent.text
+                        color: "white"
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        font.bold: true
+                    }
+                }
+
+                Button {
+                    text: "OK"
+                    Layout.fillWidth: true
+                    highlighted: true
                     onClicked: {
                         if (root.graphModel) {
                             var oldVal = root.graphModel.qmlNodeData(propColorPickerPopup.editNodeId, propColorPickerPopup.editPort)
@@ -695,6 +807,17 @@ Item {
                                 root.graphModel.qmlSetNodeData(propColorPickerPopup.editNodeId, propColorPickerPopup.editPort, newColor)
                         }
                         propColorPickerPopup.close()
+                    }
+                    background: Rectangle {
+                        color: parent.down ? "#006699" : (parent.hovered ? "#0099DD" : "#0077BB")
+                        radius: 4
+                    }
+                    contentItem: Text {
+                        text: parent.text
+                        color: "white"
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        font.bold: true
                     }
                 }
             }
