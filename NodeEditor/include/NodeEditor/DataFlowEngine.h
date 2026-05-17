@@ -2,8 +2,9 @@
 
 #include <QObject>
 #include <QList>
-#include <QUuid>
-#include <QMap>
+#include <QHash>
+#include <QSet>
+#include <QString>
 #include <QMetaObject>
 
 namespace NodeEditor {
@@ -25,28 +26,35 @@ public:
     bool autoCompute() const;
     void setAutoCompute(bool enabled);
 
-    void processNodeChange(const QUuid &nodeId);
+    void processNodeChange(uint64_t nodeId);
     Q_INVOKABLE void processAll();
+
+    // Pull evaluation: compute only the upstream nodes needed for a port value
+    QVariant requestValue(uint64_t nodeId, const QString &port);
+    Q_INVOKABLE QVariant qmlRequestValue(const QString &nodeId, const QString &port);
 
     void clearCache();
 
 signals:
-    void propagationComplete(QList<QUuid> computedNodes);
+    void propagationComplete(QList<uint64_t> computedNodes);
     void cycleDetected();
     void graphModelChanged();
     void autoComputeChanged();
 
 private:
     BaseNode *getOrCreateNode(const QString &type);
-    void executeNode(const QUuid &nodeId);
+    bool executeNode(uint64_t nodeId, QList<uint64_t> &computedOrder);
     void wireConnections();
     void unwireConnections();
 
     GraphModel *m_model = nullptr;
-    QMap<QString, BaseNode*> m_nodeInstances;
+    QHash<QString, BaseNode*> m_nodeInstances;
     bool m_processing = false;
     bool m_autoCompute = true;
     QList<QMetaObject::Connection> m_connections;
+
+    // Dirty DAG tracking
+    QSet<uint64_t> m_dirtyNodes;
 };
 
 } // namespace NodeEditor

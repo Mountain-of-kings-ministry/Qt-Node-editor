@@ -11,8 +11,8 @@ class TestDataFlowEngine : public QObject {
 private slots:
     void initTestCase()
     {
-        qRegisterMetaType<QUuid>("QUuid");
-        qRegisterMetaType<QList<QUuid>>("QList<QUuid>");
+        qRegisterMetaType<uint64_t>("uint64_t");
+        qRegisterMetaType<QList<uint64_t>>("QList<uint64_t>");
     }
 
     void testPropagationOrder()
@@ -20,18 +20,17 @@ private slots:
         GraphModel model;
         DataFlowEngine engine(&model);
 
-        QUuid a = model.addNode("A");
-        QUuid b = model.addNode("B");
-        QUuid c = model.addNode("C");
+        NodeID a = model.addNode("A");
+        NodeID b = model.addNode("B");
+        NodeID c = model.addNode("C");
         model.connectPorts(a, "out", b, "in");
         model.connectPorts(b, "out", c, "in");
 
-        QList<QUuid> computed;
         QSignalSpy spy(&engine, &DataFlowEngine::propagationComplete);
         engine.processAll();
 
         QCOMPARE(spy.count(), 1);
-        computed = spy[0][0].value<QList<QUuid>>();
+        QList<uint64_t> computed = spy[0][0].value<QList<uint64_t>>();
         QCOMPARE(computed.size(), 3);
         QCOMPARE(computed[0], a);
         QCOMPARE(computed[1], b);
@@ -43,8 +42,8 @@ private slots:
         GraphModel model;
         DataFlowEngine engine(&model);
 
-        QUuid a = model.addNode("A");
-        QUuid b = model.addNode("B");
+        NodeID a = model.addNode("A");
+        NodeID b = model.addNode("B");
         model.connectPorts(a, "out", b, "in");
         model.connectPorts(b, "out", a, "in");
 
@@ -58,9 +57,9 @@ private slots:
         GraphModel model;
         DataFlowEngine engine(&model);
 
-        QUuid a = model.addNode("A");
-        QUuid b = model.addNode("B");
-        QUuid c = model.addNode("C");
+        NodeID a = model.addNode("A");
+        NodeID b = model.addNode("B");
+        NodeID c = model.addNode("C");
         model.connectPorts(a, "out", b, "in");
         model.connectPorts(b, "out", c, "in");
 
@@ -68,7 +67,7 @@ private slots:
         engine.processNodeChange(a);
 
         QCOMPARE(spy.count(), 1);
-        auto computed = spy[0][0].value<QList<QUuid>>();
+        QList<uint64_t> computed = spy[0][0].value<QList<uint64_t>>();
         QCOMPARE(computed.size(), 3);
     }
 };

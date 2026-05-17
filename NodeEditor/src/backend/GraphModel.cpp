@@ -1,157 +1,280 @@
 #include "NodeEditor/GraphModel.h"
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonArray>
 #include <QFile>
 #include <QSet>
 #include <QPixmap>
 #include <QScreen>
 #include <QGuiApplication>
-#include <algorithm>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+
+#include <rapidjson/document.h>
+#include <rapidjson/writer.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/error/en.h>
 
 namespace NodeEditor {
 
-GraphModel::GraphModel(QObject *parent)
-    : QObject(parent)
+// ══════════════════════════════════════════════════════════════
+// Construction / Destruction
+// ══════════════════════════════════════════════════════════════
+
+GraphModel::GraphModel(QObject *parent) : QObject(parent) {}
+GraphModel::~GraphModel() = default;
+
+QString GraphModel::nodeIdToStr(NodeID id) { return ::NodeEditor::idToStr(id); }
+NodeID GraphModel::strToNodeId(const QString &str) { return ::NodeEditor::strToId(str); }
+
+// ══════════════════════════════════════════════════════════════
+// JSON ↔ QVariant converters (for RapidJSON serialization)
+// ══════════════════════════════════════════════════════════════
+
+QVariant GraphModel::jsonValToQVariant(const rapidjson::Value &val) const
 {
+    switch (val.GetType()) {
+    case rapidjson::kNullType:   return {};
+    case rapidjson::kFalseType:  return false;
+    case rapidjson::kTrueType:   return true;
+    case rapidjson::kNumberType:
+        if (val.IsInt64())   return (qlonglong)val.GetInt64();
+        if (val.IsUint64())  return (qulonglong)val.GetUint64();
+        if (val.IsDouble())  return val.GetDouble();
+        return val.GetInt();
+    case rapidjson::kStringType:
+        return QString::fromUtf8(val.GetString(), (int)val.GetStringLength());
+    case rapidjson::kArrayType: {
+        QVariantList list;
+        list.reserve((int)val.Size());
+        for (const auto &v : val.GetArray())
+            list.append(jsonValToQVariant(v));
+        return list;
+    }
+    case rapidjson::kObjectType: {
+        QVariantMap map;
+        for (const auto &m : val.GetObject())
+            map[QString::fromUtf8(m.name.GetString(), (int)m.name.GetStringLength())]
+                = jsonValToQVariant(m.value);
+        return map;
+    }
+    }
+    return {};
 }
 
-// ── Internal C++ API ──────────────────────────────────────
-
-QUuid GraphModel::addNode(const QString &type, const QPointF &position, const QUuid &existingId)
+rapidjson::Value GraphModel::qvariantToJsonVal(
+    const QVariant &qv, rapidjson::Document::AllocatorType &alloc) const
 {
-    QUuid id = existingId.isNull() ? QUuid::createUuid() : existingId;
-    NodeData data;
-    data.id = id;
-    data.type = type;
-    data.position = position;
+    if (qv.isNull())
+        return rapidjson::Value(rapidjson::kNullType);
+
+    switch (qv.typeId()) {
+    case QMetaType::Bool:
+        return rapidjson::Value(qv.toBool());
+    case QMetaType::Int:
+    case QMetaType::Long:
+    case QMetaType::LongLong:
+        return rapidjson::Value((int64_t)qv.toLongLong());
+    case QMetaType::UInt:
+        return rapidjson::Value(qv.toUInt());
+    case QMetaType::ULongLong:
+        return rapidjson::Value((uint64_t)qv.toULongLong());
+    case QMetaType::Double:
+    case QMetaType::Float:
+        return rapidjson::Value(qv.toDouble());
+    case QMetaType::QString: {
+        const QByteArray u = qv.toString().toUtf8();
+        rapidjson::Value s;
+        s.SetString(u.constData(), (rapidjson::SizeType)u.size(), alloc);
+        return s;
+    }
+    case QMetaType::QVariantList:
+    case QMetaType::QStringList: {
+        rapidjson::Value arr(rapidjson::kArrayType);
+        for (const auto &v : qv.toList())
+            arr.PushBack(qvariantToJsonVal(v, alloc), alloc);
+        return arr;
+    }
+    case QMetaType::QVariantMap: {
+        rapidjson::Value obj(rapidjson::kObjectType);
+        const auto map = qv.toMap();
+        for (auto it = map.begin(); it != map.end(); ++it) {
+            const QByteArray k = it.key().toUtf8();
+            obj.AddMember(
+                rapidjson::Value(k.constData(), (rapidjson::SizeType)k.size(), alloc),
+                qvariantToJsonVal(it.value(), alloc), alloc);
+        }
+        return obj;
+    }
+    default: {
+        const QByteArray u = qv.toString().toUtf8();
+        rapidjson::Value s;
+        s.SetString(u.constData(), (rapidjson::SizeType)u.size(), alloc);
+        return s;
+    }
+    }
+}
+
+// ══════════════════════════════════════════════════════════════
+// addNode
+// ══════════════════════════════════════════════════════════════
+
+NodeID GraphModel::addNode(const QString &type, const QPointF &position, NodeID existingId)
+{
+    NodeID id = existingId != 0 ? existingId : m_nextId.fetch_add(1, std::memory_order_relaxed);
+
+    GraphNode gn;
+    gn.id = id;
+    gn.type = type;
+
+    NodeRuntime rt;
+    rt.evalVersion = 0;
+
+    NodeUIState ui;
+    ui.x = position.x();
+    ui.y = position.y();
 
     if (auto *info = nodeTypeInfo(type)) {
         for (auto it = info->inputs.begin(); it != info->inputs.end(); ++it) {
-            data.inputs[it.key()] = it.value();
+            gn.inputs[it.key()] = it.value();
             if (it.value().defaultValue.isValid())
-                data.data[it.key()] = it.value().defaultValue;
+                rt.data[it.key()] = it.value().defaultValue;
         }
         for (auto it = info->outputs.begin(); it != info->outputs.end(); ++it) {
-            data.outputs[it.key()] = it.value();
+            gn.outputs[it.key()] = it.value();
             if (it.value().defaultValue.isValid())
-                data.data[it.key()] = it.value().defaultValue;
+                rt.data[it.key()] = it.value().defaultValue;
         }
     }
 
-    m_nodes.append(data);
+    m_graphNodes.insert(id, std::move(gn));
+    m_runtimes.insert(id, std::move(rt));
+    m_uiStates.insert(id, std::move(ui));
+
     emit nodeAdded(id);
-    emit qmlNodeAdded(uuidToStr(id));
+    emit qmlNodeAdded(idToStr(id));
     return id;
 }
 
-void GraphModel::removeNode(const QUuid &nodeId)
+// ══════════════════════════════════════════════════════════════
+// removeNode
+// ══════════════════════════════════════════════════════════════
+
+void GraphModel::removeNode(NodeID nodeId)
 {
-    QString idStr = uuidToStr(nodeId);
+    const QString idStr = idToStr(nodeId);
 
-    // Collect downstream targets and removed edges before removal
-    QList<QUuid> downstreamNodes;
-    QList<QString> downstreamPorts;
-    QList<QUuid> removedEdgeIds;
-    QList<QString> removedEdgeIdStrs;
-    for (const auto &e : m_edges) {
-        if (e.sourceNodeId == nodeId) {
-            downstreamNodes.append(e.targetNodeId);
-            downstreamPorts.append(e.targetPort);
+    QList<EdgeID> removedEdges;
+    QList<QPair<NodeID, QString>> downstreamResets;
+    for (const auto &e : std::as_const(m_graphEdges)) {
+        if (e.sourceNodeId == nodeId)
+            downstreamResets.append({e.targetNodeId, e.targetPort});
+        if (e.sourceNodeId == nodeId || e.targetNodeId == nodeId)
+            removedEdges.append(e.id);
+    }
+
+    for (EdgeID eid : removedEdges) {
+        m_graphEdges.remove(eid);
+        emit edgeRemoved(eid);
+        emit qmlEdgeRemoved(idToStr(eid));
+    }
+    m_topology.invalidate();
+
+    for (const auto &[tgtId, tgtPort] : downstreamResets) {
+        if (auto *n = graphNode(tgtId)) {
+            if (auto *typeInfo = nodeTypeInfo(n->type)) {
+                if (typeInfo->inputs.contains(tgtPort))
+                    setNodeData(tgtId, tgtPort, typeInfo->inputs[tgtPort].defaultValue);
+            }
         }
-        if (e.sourceNodeId == nodeId || e.targetNodeId == nodeId) {
-            removedEdgeIds.append(e.id);
-            removedEdgeIdStrs.append(uuidToStr(e.id));
-        }
     }
 
-    m_edges.erase(
-        std::remove_if(m_edges.begin(), m_edges.end(),
-            [&](const EdgeData &e) {
-                return e.sourceNodeId == nodeId || e.targetNodeId == nodeId;
-            }),
-        m_edges.end());
-
-    m_nodes.erase(
-        std::remove_if(m_nodes.begin(), m_nodes.end(),
-            [&](const NodeData &n) { return n.id == nodeId; }),
-        m_nodes.end());
-
-    // Notify QML about removed edges so they disappear from canvas
-    for (int i = 0; i < removedEdgeIds.size(); ++i) {
-        emit edgeRemoved(removedEdgeIds[i]);
-        emit qmlEdgeRemoved(removedEdgeIdStrs[i]);
-    }
-
-    // Reset downstream input ports to their type defaults
-    for (int i = 0; i < downstreamNodes.size(); ++i) {
-        auto *targetNode = node(downstreamNodes[i]);
-        if (!targetNode) continue;
-        auto *typeInfo = nodeTypeInfo(targetNode->type);
-        if (typeInfo && typeInfo->inputs.contains(downstreamPorts[i]))
-            setNodeData(downstreamNodes[i], downstreamPorts[i],
-                        typeInfo->inputs[downstreamPorts[i]].defaultValue);
-    }
+    m_graphNodes.remove(nodeId);
+    m_runtimes.remove(nodeId);
+    m_uiStates.remove(nodeId);
 
     emit nodeRemoved(nodeId);
     emit qmlNodeRemoved(idStr);
 }
 
-NodeData *GraphModel::node(const QUuid &nodeId)
+// ══════════════════════════════════════════════════════════════
+// Node accessors
+// ══════════════════════════════════════════════════════════════
+
+GraphNode *GraphModel::graphNode(NodeID nodeId)
 {
-    for (auto &n : m_nodes)
-        if (n.id == nodeId)
-            return &n;
-    return nullptr;
+    auto it = m_graphNodes.find(nodeId);
+    return it != m_graphNodes.end() ? &it.value() : nullptr;
 }
 
-const QList<NodeData> &GraphModel::nodes() const
+const GraphNode *GraphModel::graphNode(NodeID nodeId) const
 {
-    return m_nodes;
+    auto it = m_graphNodes.find(nodeId);
+    return it != m_graphNodes.end() ? &it.value() : nullptr;
 }
 
-QUuid GraphModel::connectPorts(const QUuid &sourceNode, const QString &sourcePort,
-                               const QUuid &targetNode, const QString &targetPort)
+NodeRuntime *GraphModel::nodeRuntime(NodeID nodeId)
 {
-    EdgeData edge;
-    edge.id = QUuid::createUuid();
-    edge.sourceNodeId = sourceNode;
-    edge.sourcePort = sourcePort;
-    edge.targetNodeId = targetNode;
-    edge.targetPort = targetPort;
-    m_edges.append(edge);
-    emit edgeAdded(edge.id);
-    emit qmlEdgeAdded(uuidToStr(edge.id));
-    return edge.id;
+    auto it = m_runtimes.find(nodeId);
+    return it != m_runtimes.end() ? &it.value() : nullptr;
 }
 
-void GraphModel::disconnectEdge(const QUuid &edgeId)
+const NodeRuntime *GraphModel::nodeRuntime(NodeID nodeId) const
 {
-    // Find edge info before removal
-    QUuid targetNodeId;
-    QString targetPort;
-    for (const auto &e : m_edges) {
-        if (e.id == edgeId) {
-            targetNodeId = e.targetNodeId;
-            targetPort = e.targetPort;
-            break;
-        }
-    }
+    auto it = m_runtimes.find(nodeId);
+    return it != m_runtimes.end() ? &it.value() : nullptr;
+}
 
-    QString idStr = uuidToStr(edgeId);
-    m_edges.erase(
-        std::remove_if(m_edges.begin(), m_edges.end(),
-            [&](const EdgeData &e) { return e.id == edgeId; }),
-        m_edges.end());
+NodeUIState *GraphModel::nodeUIState(NodeID nodeId)
+{
+    auto it = m_uiStates.find(nodeId);
+    return it != m_uiStates.end() ? &it.value() : nullptr;
+}
 
-    // Reset target input to its type default
-    if (!targetNodeId.isNull()) {
-        auto *targetNode = node(targetNodeId);
-        if (targetNode) {
-            auto *typeInfo = nodeTypeInfo(targetNode->type);
-            if (typeInfo && typeInfo->inputs.contains(targetPort))
-                setNodeData(targetNodeId, targetPort,
-                            typeInfo->inputs[targetPort].defaultValue);
+const NodeUIState *GraphModel::nodeUIState(NodeID nodeId) const
+{
+    auto it = m_uiStates.find(nodeId);
+    return it != m_uiStates.end() ? &it.value() : nullptr;
+}
+
+// ══════════════════════════════════════════════════════════════
+// Edge management
+// ══════════════════════════════════════════════════════════════
+
+EdgeID GraphModel::connectPorts(NodeID sourceNode, const QString &sourcePort,
+                                NodeID targetNode, const QString &targetPort)
+{
+    EdgeID id = m_nextId.fetch_add(1, std::memory_order_relaxed);
+    GraphEdge e;
+    e.id = id;
+    e.sourceNodeId = sourceNode;
+    e.sourcePort = sourcePort;
+    e.targetNodeId = targetNode;
+    e.targetPort = targetPort;
+    m_graphEdges.insert(id, std::move(e));
+    m_topology.invalidate();
+    emit edgeAdded(id);
+    emit qmlEdgeAdded(idToStr(id));
+    return id;
+}
+
+void GraphModel::disconnectEdge(EdgeID edgeId)
+{
+    auto it = m_graphEdges.find(edgeId);
+    if (it == m_graphEdges.end()) return;
+
+    NodeID targetNodeId = it.value().targetNodeId;
+    QString targetPort = it.value().targetPort;
+    QString idStr = idToStr(edgeId);
+
+    m_graphEdges.erase(it);
+    m_topology.invalidate();
+
+    if (targetNodeId != 0) {
+        if (auto *n = graphNode(targetNodeId)) {
+            if (auto *typeInfo = nodeTypeInfo(n->type)) {
+                if (typeInfo->inputs.contains(targetPort))
+                    setNodeData(targetNodeId, targetPort,
+                                typeInfo->inputs[targetPort].defaultValue);
+            }
         }
     }
 
@@ -159,88 +282,133 @@ void GraphModel::disconnectEdge(const QUuid &edgeId)
     emit qmlEdgeRemoved(idStr);
 }
 
-const QList<EdgeData> &GraphModel::edges() const
+const GraphEdge *GraphModel::graphEdge(EdgeID edgeId) const
 {
-    return m_edges;
+    auto it = m_graphEdges.find(edgeId);
+    return it != m_graphEdges.end() ? &it.value() : nullptr;
 }
 
-void GraphModel::setNodeData(const QUuid &nodeId, const QString &key, const QVariant &value)
+// ══════════════════════════════════════════════════════════════
+// Runtime data
+// ══════════════════════════════════════════════════════════════
+
+void GraphModel::setNodeData(NodeID nodeId, const QString &key, const QVariant &value)
 {
-    auto *n = node(nodeId);
-    if (!n)
-        return;
-    n->data[key] = value;
+    QMutexLocker lock(&m_runtimeMutex);
+    auto *rt = nodeRuntime(nodeId);
+    if (!rt) return;
+    rt->data[key] = value;
+    lock.unlock();
     emit nodeDataChanged(nodeId, key);
-    emit qmlNodeDataChanged(uuidToStr(nodeId), key);
+    emit qmlNodeDataChanged(idToStr(nodeId), key);
 }
 
-QVariant GraphModel::nodeData(const QUuid &nodeId, const QString &key) const
+QVariant GraphModel::nodeData(NodeID nodeId, const QString &key) const
 {
-    for (const auto &n : m_nodes)
-        if (n.id == nodeId)
-            return n.data.value(key);
-    return {};
+    QMutexLocker lock(&m_runtimeMutex);
+    const auto *rt = nodeRuntime(nodeId);
+    if (!rt) return {};
+    auto it = rt->data.find(key);
+    return it != rt->data.end() ? it.value() : QVariant();
 }
 
-void GraphModel::setNodePosition(const QUuid &nodeId, const QPointF &position)
+void GraphModel::setNodePosition(NodeID nodeId, const QPointF &position)
 {
-    auto *n = node(nodeId);
-    if (!n)
-        return;
-    n->position = position;
+    auto *ui = nodeUIState(nodeId);
+    if (!ui) return;
+    ui->x = position.x();
+    ui->y = position.y();
     emit nodePositionChanged(nodeId);
-    emit qmlNodePositionChanged(uuidToStr(nodeId));
+    emit qmlNodePositionChanged(idToStr(nodeId));
 }
 
-QPointF GraphModel::nodePosition(const QUuid &nodeId) const
+QPointF GraphModel::nodePosition(NodeID nodeId) const
 {
-    for (const auto &n : m_nodes)
-        if (n.id == nodeId)
-            return n.position;
-    return {};
+    const auto *ui = nodeUIState(nodeId);
+    if (!ui) return {};
+    return QPointF(ui->x, ui->y);
 }
 
-QList<QUuid> GraphModel::topologicalSort() const
+// ══════════════════════════════════════════════════════════════
+// Topology
+// ══════════════════════════════════════════════════════════════
+
+const QList<NodeID> &GraphModel::cachedTopologicalOrder()
 {
-    QMap<QUuid, int> inDegree;
-    QMap<QUuid, QList<QUuid>> adjacency;
+    if (m_topology.valid)
+        return m_topology.sorted;
 
-    for (const auto &n : m_nodes) {
-        inDegree[n.id] = 0;
-        adjacency[n.id] = {};
+    m_topology.adjacency.clear();
+    m_topology.inDegree.clear();
+    m_topology.sorted.clear();
+
+    for (const auto &n : m_graphNodes) {
+        m_topology.inDegree[n.id] = 0;
+        m_topology.adjacency[n.id] = {};
     }
 
-    for (const auto &e : m_edges) {
-        adjacency[e.sourceNodeId].append(e.targetNodeId);
-        inDegree[e.targetNodeId]++;
+    for (const auto &e : m_graphEdges) {
+        m_topology.adjacency[e.sourceNodeId].append(e.targetNodeId);
+        m_topology.inDegree[e.targetNodeId]++;
     }
 
-    QList<QUuid> result;
-    QList<QUuid> queue;
-
-    for (auto it = inDegree.begin(); it != inDegree.end(); ++it)
+    QList<NodeID> queue;
+    for (auto it = m_topology.inDegree.begin(); it != m_topology.inDegree.end(); ++it)
         if (it.value() == 0)
             queue.append(it.key());
 
     while (!queue.isEmpty()) {
-        QUuid id = queue.takeFirst();
-        result.append(id);
-        for (const auto &neighbor : adjacency[id]) {
-            inDegree[neighbor]--;
-            if (inDegree[neighbor] == 0)
+        NodeID id = queue.takeFirst();
+        m_topology.sorted.append(id);
+        for (NodeID neighbor : m_topology.adjacency[id]) {
+            m_topology.inDegree[neighbor]--;
+            if (m_topology.inDegree[neighbor] == 0)
                 queue.append(neighbor);
         }
     }
 
-    return result;
+    m_topology.valid = true;
+    return m_topology.sorted;
 }
 
-bool GraphModel::hasCycles() const
+bool GraphModel::hasCycles()
 {
-    return topologicalSort().size() != m_nodes.size();
+    return cachedTopologicalOrder().size() != m_graphNodes.size();
 }
 
-// ── Node type registry ────────────────────────────────────
+QVector<QList<NodeID>> GraphModel::topologicalLevels()
+{
+    cachedTopologicalOrder(); // ensure topology is valid
+    if (!m_topology.valid) return {};
+
+    // BFS to compute depth of each node
+    QHash<NodeID, int> depth;
+    for (NodeID id : m_topology.sorted)
+        depth[id] = 0;
+
+    for (NodeID id : m_topology.sorted) {
+        int d = depth[id];
+        for (NodeID neighbor : m_topology.adjacency[id]) {
+            if (depth[neighbor] < d + 1)
+                depth[neighbor] = d + 1;
+        }
+    }
+
+    // Group by depth
+    int maxDepth = 0;
+    for (auto it = depth.begin(); it != depth.end(); ++it)
+        if (it.value() > maxDepth) maxDepth = it.value();
+
+    QVector<QList<NodeID>> levels(maxDepth + 1);
+    for (auto it = depth.begin(); it != depth.end(); ++it)
+        levels[it.value()].append(it.key());
+
+    return levels;
+}
+
+// ══════════════════════════════════════════════════════════════
+// Registry
+// ══════════════════════════════════════════════════════════════
 
 void GraphModel::registerNodeType(const QString &type, const NodeTypeInfo &info)
 {
@@ -250,39 +418,13 @@ void GraphModel::registerNodeType(const QString &type, const NodeTypeInfo &info)
 const NodeTypeInfo *GraphModel::nodeTypeInfo(const QString &type) const
 {
     auto it = m_nodeTypes.find(type);
-    if (it != m_nodeTypes.end())
-        return &it.value();
-    return nullptr;
+    return it != m_nodeTypes.end() ? &it.value() : nullptr;
 }
-
-QStringList GraphModel::qmlAllNodeTypes() const
-{
-    QStringList result;
-    QSet<QString> seen;
-    for (const auto &cat : m_categories) {
-        for (auto it = m_nodeTypes.begin(); it != m_nodeTypes.end(); ++it) {
-            if (it.value().categoryId == cat.id) {
-                result.append(it.key());
-                seen.insert(it.key());
-            }
-        }
-    }
-    for (auto it = m_nodeTypes.begin(); it != m_nodeTypes.end(); ++it) {
-        if (!seen.contains(it.key()))
-            result.append(it.key());
-    }
-    return result;
-}
-
-// ── Category registry ────────────────────────────────────
 
 void GraphModel::registerCategory(const NodeCategory &cat)
 {
     for (auto &c : m_categories) {
-        if (c.id == cat.id) {
-            c = cat;
-            return;
-        }
+        if (c.id == cat.id) { c = cat; return; }
     }
     m_categories.append(cat);
 }
@@ -303,321 +445,261 @@ QVariantList GraphModel::qmlCategories() const
 QStringList GraphModel::qmlNodesInCategory(const QString &categoryId) const
 {
     QStringList result;
-    for (auto it = m_nodeTypes.begin(); it != m_nodeTypes.end(); ++it) {
+    for (auto it = m_nodeTypes.begin(); it != m_nodeTypes.end(); ++it)
         if (it.value().categoryId == categoryId)
             result.append(it.key());
-    }
     return result;
 }
 
-// ── QML-friendly API ──────────────────────────────────────
+QStringList GraphModel::qmlAllNodeTypes() const
+{
+    QStringList result;
+    QSet<QString> seen;
+    for (const auto &cat : m_categories) {
+        for (auto it = m_nodeTypes.begin(); it != m_nodeTypes.end(); ++it)
+            if (it.value().categoryId == cat.id) { result.append(it.key()); seen.insert(it.key()); }
+    }
+    for (auto it = m_nodeTypes.begin(); it != m_nodeTypes.end(); ++it)
+        if (!seen.contains(it.key()))
+            result.append(it.key());
+    return result;
+}
+
+// ══════════════════════════════════════════════════════════════
+// QML-friendly API
+// ══════════════════════════════════════════════════════════════
 
 QString GraphModel::qmlAddNode(const QString &type, double x, double y)
 {
-    return uuidToStr(addNode(type, QPointF(x, y)));
+    return idToStr(addNode(type, QPointF(x, y)));
 }
 
 void GraphModel::qmlRemoveNode(const QString &nodeId)
 {
-    removeNode(strToUuid(nodeId));
+    removeNode(strToId(nodeId));
 }
 
 QStringList GraphModel::qmlNodeIds() const
 {
-    QStringList ids;
-    for (const auto &n : m_nodes)
-        ids.append(uuidToStr(n.id));
+    QStringList ids; ids.reserve(m_graphNodes.size());
+    for (const auto &n : m_graphNodes)
+        ids.append(idToStr(n.id));
     return ids;
 }
 
-QVariantMap GraphModel::qmlNodeInfo(const QString &nodeId) const
+QVariantMap GraphModel::qmlNodeInfo(const QString &nodeIdStr) const
 {
-    QUuid id = strToUuid(nodeId);
-    for (const auto &n : m_nodes) {
-        if (n.id == id) {
-            QVariantMap info;
-            info["id"] = uuidToStr(n.id);
-            info["type"] = n.type;
-            info["x"] = n.position.x();
-            info["y"] = n.position.y();
+    NodeID id = strToId(nodeIdStr);
+    const auto *gn = graphNode(id);
+    if (!gn) return {};
+    const auto *ui = nodeUIState(id);
+    const auto *typeInfo = nodeTypeInfo(gn->type);
 
-            QStringList inPorts, outPorts;
-            QVariantList inPortTypes, outPortTypes;
-            for (auto it = n.inputs.begin(); it != n.inputs.end(); ++it) {
-                inPorts.append(it.key());
-                inPortTypes.append(static_cast<int>(it.value().type));
-            }
-            for (auto it = n.outputs.begin(); it != n.outputs.end(); ++it) {
-                outPorts.append(it.key());
-                outPortTypes.append(static_cast<int>(it.value().type));
-            }
-            info["inputPorts"] = inPorts;
-            info["inputPortTypes"] = inPortTypes;
-            info["outputPorts"] = outPorts;
-            info["outputPortTypes"] = outPortTypes;
+    QVariantMap info;
+    info["id"] = idToStr(gn->id);
+    info["type"] = gn->type;
+    info["x"] = ui ? ui->x : 0.0;
+    info["y"] = ui ? ui->y : 0.0;
 
-            auto *typeInfo = nodeTypeInfo(n.type);
-            info["color"] = typeInfo ? typeInfo->displayColor : "#4A9EFF";
-            info["categoryId"] = typeInfo ? typeInfo->categoryId : QString();
-            info["subCategory"] = typeInfo ? typeInfo->subCategory : QString();
-            info["nodeName"] = typeInfo ? typeInfo->nodeName : QString();
-
-            return info;
-        }
+    QStringList inPorts, outPorts;
+    QVariantList inPortTypes, outPortTypes;
+    for (auto it = gn->inputs.begin(); it != gn->inputs.end(); ++it) {
+        inPorts.append(it.key());
+        inPortTypes.append(static_cast<int>(it.value().type));
     }
-    return {};
+    for (auto it = gn->outputs.begin(); it != gn->outputs.end(); ++it) {
+        outPorts.append(it.key());
+        outPortTypes.append(static_cast<int>(it.value().type));
+    }
+    info["inputPorts"] = inPorts;
+    info["inputPortTypes"] = inPortTypes;
+    info["outputPorts"] = outPorts;
+    info["outputPortTypes"] = outPortTypes;
+    info["color"] = typeInfo ? typeInfo->displayColor : "#4A9EFF";
+    info["categoryId"] = typeInfo ? typeInfo->categoryId : QString();
+    info["subCategory"] = typeInfo ? typeInfo->subCategory : QString();
+    info["nodeName"] = typeInfo ? typeInfo->nodeName : QString();
+    return info;
 }
 
-QPointF GraphModel::qmlNodePosition(const QString &nodeId) const
-{
-    return nodePosition(strToUuid(nodeId));
-}
-
-void GraphModel::qmlSetNodePosition(const QString &nodeId, double x, double y)
-{
-    setNodePosition(strToUuid(nodeId), QPointF(x, y));
-}
-
-void GraphModel::qmlSetNodeData(const QString &nodeId, const QString &key, const QVariant &value)
-{
-    setNodeData(strToUuid(nodeId), key, value);
-}
-
-QVariant GraphModel::qmlNodeData(const QString &nodeId, const QString &key) const
-{
-    return nodeData(strToUuid(nodeId), key);
-}
+QPointF GraphModel::qmlNodePosition(const QString &nodeId) const { return nodePosition(strToId(nodeId)); }
+void GraphModel::qmlSetNodePosition(const QString &nodeId, double x, double y) { setNodePosition(strToId(nodeId), QPointF(x, y)); }
+void GraphModel::qmlSetNodeData(const QString &nodeId, const QString &key, const QVariant &value) { setNodeData(strToId(nodeId), key, value); }
+QVariant GraphModel::qmlNodeData(const QString &nodeId, const QString &key) const { return nodeData(strToId(nodeId), key); }
 
 QString GraphModel::qmlConnectPorts(const QString &sourceNode, const QString &sourcePort,
                                     const QString &targetNode, const QString &targetPort)
 {
-    return uuidToStr(connectPorts(strToUuid(sourceNode), sourcePort,
-                                  strToUuid(targetNode), targetPort));
+    return idToStr(connectPorts(strToId(sourceNode), sourcePort, strToId(targetNode), targetPort));
 }
 
-void GraphModel::qmlDisconnectEdge(const QString &edgeId)
-{
-    disconnectEdge(strToUuid(edgeId));
-}
+void GraphModel::qmlDisconnectEdge(const QString &edgeId) { disconnectEdge(strToId(edgeId)); }
 
 void GraphModel::qmlDisconnectPort(const QString &nodeId, const QString &portName, bool isInput)
 {
-    QUuid id = strToUuid(nodeId);
-    QList<QUuid> toRemove;
-    for (const auto &e : m_edges) {
-        if (isInput) {
-            if (e.targetNodeId == id && e.targetPort == portName)
-                toRemove.append(e.id);
-        } else {
-            if (e.sourceNodeId == id && e.sourcePort == portName)
-                toRemove.append(e.id);
-        }
-    }
-    for (const auto &eid : toRemove)
-        disconnectEdge(eid);
+    NodeID id = strToId(nodeId);
+    QList<EdgeID> toRemove;
+    for (const auto &e : std::as_const(m_graphEdges))
+        if (isInput ? (e.targetNodeId == id && e.targetPort == portName)
+                    : (e.sourceNodeId == id && e.sourcePort == portName))
+            toRemove.append(e.id);
+    for (EdgeID eid : toRemove) disconnectEdge(eid);
 }
 
 QStringList GraphModel::qmlEdgeIds() const
 {
-    QStringList ids;
-    for (const auto &e : m_edges)
-        ids.append(uuidToStr(e.id));
+    QStringList ids; ids.reserve(m_graphEdges.size());
+    for (const auto &e : m_graphEdges)
+        ids.append(idToStr(e.id));
     return ids;
 }
 
 QVariantMap GraphModel::qmlEdgeInfo(const QString &edgeId) const
 {
-    QUuid id = strToUuid(edgeId);
-    for (const auto &e : m_edges) {
-        if (e.id == id) {
-            QVariantMap info;
-            info["id"] = uuidToStr(e.id);
-            info["sourceNodeId"] = uuidToStr(e.sourceNodeId);
-            info["sourcePort"] = e.sourcePort;
-            info["targetNodeId"] = uuidToStr(e.targetNodeId);
-            info["targetPort"] = e.targetPort;
-            return info;
-        }
-    }
-    return {};
+    const auto *e = graphEdge(strToId(edgeId));
+    if (!e) return {};
+    QVariantMap info;
+    info["id"] = idToStr(e->id);
+    info["sourceNodeId"] = idToStr(e->sourceNodeId);
+    info["sourcePort"] = e->sourcePort;
+    info["targetNodeId"] = idToStr(e->targetNodeId);
+    info["targetPort"] = e->targetPort;
+    return info;
 }
 
 QStringList GraphModel::qmlNodeInputPorts(const QString &nodeId) const
 {
-    QUuid id = strToUuid(nodeId);
-    for (const auto &n : m_nodes)
-        if (n.id == id) {
-            QStringList ports;
-            for (auto it = n.inputs.begin(); it != n.inputs.end(); ++it)
-                ports.append(it.key());
-            return ports;
-        }
-    return {};
+    const auto *gn = graphNode(strToId(nodeId));
+    if (!gn) return {};
+    QStringList ports;
+    for (auto it = gn->inputs.begin(); it != gn->inputs.end(); ++it) ports.append(it.key());
+    return ports;
 }
 
 QStringList GraphModel::qmlNodeOutputPorts(const QString &nodeId) const
 {
-    QUuid id = strToUuid(nodeId);
-    for (const auto &n : m_nodes)
-        if (n.id == id) {
-            QStringList ports;
-            for (auto it = n.outputs.begin(); it != n.outputs.end(); ++it)
-                ports.append(it.key());
-            return ports;
-        }
-    return {};
+    const auto *gn = graphNode(strToId(nodeId));
+    if (!gn) return {};
+    QStringList ports;
+    for (auto it = gn->outputs.begin(); it != gn->outputs.end(); ++it) ports.append(it.key());
+    return ports;
 }
 
 int GraphModel::qmlPortType(const QString &nodeId, const QString &port, bool isInput) const
 {
-    QUuid id = strToUuid(nodeId);
-    for (const auto &n : m_nodes) {
-        if (n.id == id) {
-            if (isInput) {
-                auto it = n.inputs.find(port);
-                if (it != n.inputs.end())
-                    return static_cast<int>(it.value().type);
-            } else {
-                auto it = n.outputs.find(port);
-                if (it != n.outputs.end())
-                    return static_cast<int>(it.value().type);
-            }
-        }
+    const auto *gn = graphNode(strToId(nodeId));
+    if (!gn) return static_cast<int>(PortType::Generic);
+    if (isInput) {
+        auto it = gn->inputs.find(port);
+        if (it != gn->inputs.end()) return static_cast<int>(it.value().type);
+    } else {
+        auto it = gn->outputs.find(port);
+        if (it != gn->outputs.end()) return static_cast<int>(it.value().type);
     }
     return static_cast<int>(PortType::Generic);
 }
 
 bool GraphModel::qmlIsPortConnected(const QString &nodeId, const QString &port, bool isInput) const
 {
-    QUuid id = strToUuid(nodeId);
-    for (const auto &e : m_edges) {
-        if (isInput) {
-            if (e.targetNodeId == id && e.targetPort == port)
-                return true;
-        } else {
-            if (e.sourceNodeId == id && e.sourcePort == port)
-                return true;
-        }
-    }
+    NodeID id = strToId(nodeId);
+    for (const auto &e : std::as_const(m_graphEdges))
+        if (isInput ? (e.targetNodeId == id && e.targetPort == port)
+                    : (e.sourceNodeId == id && e.sourcePort == port))
+            return true;
     return false;
 }
 
-// ── Dynamic port management ─────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// Dynamic port management
+// ══════════════════════════════════════════════════════════════
 
 void GraphModel::qmlAddInputPort(const QString &nodeId, const QString &portName, int portType)
 {
-    QUuid id = strToUuid(nodeId);
-    for (auto &n : m_nodes) {
-        if (n.id == id) {
-            if (n.inputs.contains(portName)) return;
-            n.inputs[portName] = PortInfo{static_cast<PortType>(portType), portName, QVariant()};
-            emit qmlNodePortsChanged(nodeId);
-            emit nodeDataChanged(id, portName);
-            return;
-        }
-    }
+    auto *gn = graphNode(strToId(nodeId));
+    if (!gn || gn->inputs.contains(portName)) return;
+    gn->inputs[portName] = PortInfo{static_cast<PortType>(portType), portName, QVariant()};
+    emit qmlNodePortsChanged(nodeId);
+    emit nodeDataChanged(strToId(nodeId), portName);
 }
 
 void GraphModel::qmlRemoveInputPort(const QString &nodeId, const QString &portName)
 {
-    QUuid id = strToUuid(nodeId);
-    for (auto &n : m_nodes) {
-        if (n.id == id) {
-            n.inputs.remove(portName);
-            n.data.remove(portName);
-            emit qmlNodePortsChanged(nodeId);
-            return;
-        }
-    }
+    auto *gn = graphNode(strToId(nodeId));
+    if (!gn) return;
+    gn->inputs.remove(portName);
+    if (auto *rt = nodeRuntime(strToId(nodeId)))
+        rt->data.remove(portName);
+    emit qmlNodePortsChanged(nodeId);
 }
 
 void GraphModel::qmlAddOutputPort(const QString &nodeId, const QString &portName, int portType)
 {
-    QUuid id = strToUuid(nodeId);
-    for (auto &n : m_nodes) {
-        if (n.id == id) {
-            if (n.outputs.contains(portName)) return;
-            n.outputs[portName] = PortInfo{static_cast<PortType>(portType), portName, QVariant()};
-            emit qmlNodePortsChanged(nodeId);
-            emit nodeDataChanged(id, portName);
-            return;
-        }
-    }
+    auto *gn = graphNode(strToId(nodeId));
+    if (!gn || gn->outputs.contains(portName)) return;
+    gn->outputs[portName] = PortInfo{static_cast<PortType>(portType), portName, QVariant()};
+    emit qmlNodePortsChanged(nodeId);
+    emit nodeDataChanged(strToId(nodeId), portName);
 }
 
 void GraphModel::qmlRemoveOutputPort(const QString &nodeId, const QString &portName)
 {
-    QUuid id = strToUuid(nodeId);
-    for (auto &n : m_nodes) {
-        if (n.id == id) {
-            n.outputs.remove(portName);
-            n.data.remove(portName);
-            emit qmlNodePortsChanged(nodeId);
-            return;
-        }
-    }
+    auto *gn = graphNode(strToId(nodeId));
+    if (!gn) return;
+    gn->outputs.remove(portName);
+    if (auto *rt = nodeRuntime(strToId(nodeId)))
+        rt->data.remove(portName);
+    emit qmlNodePortsChanged(nodeId);
 }
 
 void GraphModel::qmlLoadCanvasFile(const QString &nodeId, const QString &filePath)
 {
     QFile file(filePath);
-    if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "qmlLoadCanvasFile: cannot open file:" << filePath;
-        return;
-    }
+    if (!file.open(QIODevice::ReadOnly)) { qWarning() << "qmlLoadCanvasFile: cannot open file:" << filePath; return; }
+    QByteArray raw = file.readAll(); file.close();
 
-    QByteArray data = file.readAll();
-    file.close();
+    rapidjson::Document doc;
+    doc.Parse(raw.constData());
+    if (doc.HasParseError()) { qWarning() << "JSON parse error:" << rapidjson::GetParseError_En(doc.GetParseError()); return; }
+    if (!doc.IsObject()) return;
 
-    QJsonParseError err;
-    QJsonDocument doc = QJsonDocument::fromJson(data, &err);
-    if (err.error != QJsonParseError::NoError) {
-        qWarning() << "qmlLoadCanvasFile: JSON parse error:" << err.errorString();
-        return;
-    }
-
-    if (!doc.isObject()) return;
-
-    QJsonObject rootObj = doc.object();
-    QJsonArray nodesArr = rootObj["nodes"].toArray();
+    auto &nodesArr = doc["nodes"];
+    if (!nodesArr.IsArray()) return;
 
     int inputIdx = 0, outputIdx = 0;
-
-    for (const auto &val : nodesArr) {
-        QJsonObject obj = val.toObject();
-        QString type = obj["type"].toString();
-        QJsonObject dataObj = obj["data"].toObject();
+    for (const auto &val : nodesArr.GetArray()) {
+        if (!val.IsObject()) continue;
+        const auto &obj = val.GetObject();
+        QString type = QString::fromUtf8(obj["type"].GetString(), (int)obj["type"].GetStringLength());
 
         if (type == "CanvasInput") {
-            QString name = dataObj["name"].toString();
-            if (name.isEmpty()) {
-                name = QStringLiteral("input_%1").arg(inputIdx);
-            }
-            int portType = static_cast<int>(PortType::Generic);
-            if (dataObj.contains("portType"))
-                portType = dataObj["portType"].toInt();
-            qmlAddInputPort(nodeId, name, portType);
+            QString name;
+            if (obj.HasMember("data") && obj["data"].IsObject() && obj["data"].HasMember("name"))
+                name = QString::fromUtf8(obj["data"]["name"].GetString(), (int)obj["data"]["name"].GetStringLength());
+            if (name.isEmpty()) name = QStringLiteral("input_%1").arg(inputIdx);
+            int pt = static_cast<int>(PortType::Generic);
+            if (obj.HasMember("data") && obj["data"].IsObject() && obj["data"].HasMember("portType"))
+                pt = obj["data"]["portType"].GetInt();
+            qmlAddInputPort(nodeId, name, pt);
             inputIdx++;
         } else if (type == "CanvasOutput") {
-            QString name = dataObj["name"].toString();
-            if (name.isEmpty()) {
-                name = QStringLiteral("output_%1").arg(outputIdx);
-            }
-            int portType = static_cast<int>(PortType::Generic);
-            if (dataObj.contains("portType"))
-                portType = dataObj["portType"].toInt();
-            qmlAddOutputPort(nodeId, name, portType);
+            QString name;
+            if (obj.HasMember("data") && obj["data"].IsObject() && obj["data"].HasMember("name"))
+                name = QString::fromUtf8(obj["data"]["name"].GetString(), (int)obj["data"]["name"].GetStringLength());
+            if (name.isEmpty()) name = QStringLiteral("output_%1").arg(outputIdx);
+            int pt = static_cast<int>(PortType::Generic);
+            if (obj.HasMember("data") && obj["data"].IsObject() && obj["data"].HasMember("portType"))
+                pt = obj["data"]["portType"].GetInt();
+            qmlAddOutputPort(nodeId, name, pt);
             outputIdx++;
         }
     }
 }
 
-// ── Static helpers ────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// Static helpers
+// ══════════════════════════════════════════════════════════════
 
-int GraphModel::portTypeToInt(PortType t)
-{
-    return static_cast<int>(t);
-}
+int GraphModel::portTypeToInt(PortType t) { return static_cast<int>(t); }
 
 QString GraphModel::portTypeColor(int portType)
 {
@@ -629,11 +711,11 @@ QString GraphModel::portTypeColor(int portType)
     case PortType::Color:       return "#A29BFE";
     case PortType::Generic:     return "#888888";
     case PortType::Double:      return "#F0DB4F";
-    case PortType::Vec2:        return "#E17055";
-    case PortType::Vec3:        return "#E17055";
+    case PortType::Vec2:
+    case PortType::Vec3:
     case PortType::Vec4:        return "#E17055";
-    case PortType::Array:       return "#00CEC9";
-    case PortType::Map:         return "#00CEC9";
+    case PortType::Array:
+    case PortType::Map:
     case PortType::JSON:        return "#00CEC9";
     case PortType::Image:       return "#FD79A8";
     case PortType::AudioBuffer: return "#6C5CE7";
@@ -674,104 +756,161 @@ QString GraphModel::qmlScreenColorAt(int x, int y)
     return color.name(QColor::HexArgb);
 }
 
-// ── Serialization ───────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// Serialization (RapidJSON)
+// ══════════════════════════════════════════════════════════════
 
 QString GraphModel::qmlSerializeToJson() const
 {
-    QJsonObject rootObj;
-    QJsonArray nodesArr;
-    for (const auto &n : m_nodes) {
-        QJsonObject nodeObj;
-        nodeObj["id"] = uuidToStr(n.id);
-        nodeObj["type"] = n.type;
-        nodeObj["x"] = n.position.x();
-        nodeObj["y"] = n.position.y();
-        QJsonObject dataObj;
-        for (auto it = n.data.begin(); it != n.data.end(); ++it)
-            dataObj[it.key()] = QJsonValue::fromVariant(it.value());
-        nodeObj["data"] = dataObj;
-        nodesArr.append(nodeObj);
-    }
-    rootObj["nodes"] = nodesArr;
+    rapidjson::StringBuffer buf;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buf);
 
-    QJsonArray edgesArr;
-    for (const auto &e : m_edges) {
-        QJsonObject edgeObj;
-        edgeObj["id"] = uuidToStr(e.id);
-        edgeObj["sourceNodeId"] = uuidToStr(e.sourceNodeId);
-        edgeObj["sourcePort"] = e.sourcePort;
-        edgeObj["targetNodeId"] = uuidToStr(e.targetNodeId);
-        edgeObj["targetPort"] = e.targetPort;
-        edgesArr.append(edgeObj);
-    }
-    rootObj["edges"] = edgesArr;
+    writer.StartObject();
+    writer.Key("nodes");
+    writer.StartArray();
 
-    QJsonDocument doc(rootObj);
-    return QString::fromUtf8(doc.toJson(QJsonDocument::Compact));
+    for (const auto &n : m_graphNodes) {
+        writer.StartObject();
+        writer.Key("id");   writer.Uint64(n.id);
+        writer.Key("type"); writer.String(n.type.toUtf8().constData(), (rapidjson::SizeType)n.type.toUtf8().size());
+        const auto *ui = nodeUIState(n.id);
+        writer.Key("x"); writer.Double(ui ? ui->x : 0.0);
+        writer.Key("y"); writer.Double(ui ? ui->y : 0.0);
+
+        // Serialize runtime data
+        writer.Key("data");
+        const auto *rt = nodeRuntime(n.id);
+        if (rt) {
+            writer.StartObject();
+            for (auto it = rt->data.begin(); it != rt->data.end(); ++it) {
+                writer.Key(it.key().toUtf8().constData(), (rapidjson::SizeType)it.key().toUtf8().size());
+                // Convert QVariant to RapidJSON inline using a temp doc
+                rapidjson::Document tmpDoc;
+                tmpDoc.SetObject();
+                auto val = qvariantToJsonVal(it.value(), tmpDoc.GetAllocator());
+                val.Accept(writer);
+            }
+            writer.EndObject();
+        } else {
+            writer.StartObject(); writer.EndObject();
+        }
+        writer.EndObject();
+    }
+
+    writer.EndArray();
+    writer.Key("edges");
+    writer.StartArray();
+
+    for (const auto &e : m_graphEdges) {
+        writer.StartObject();
+        writer.Key("id");            writer.Uint64(e.id);
+        writer.Key("sourceNodeId"); writer.Uint64(e.sourceNodeId);
+        writer.Key("sourcePort");   writer.String(e.sourcePort.toUtf8().constData(),
+                                                    (rapidjson::SizeType)e.sourcePort.toUtf8().size());
+        writer.Key("targetNodeId"); writer.Uint64(e.targetNodeId);
+        writer.Key("targetPort");   writer.String(e.targetPort.toUtf8().constData(),
+                                                    (rapidjson::SizeType)e.targetPort.toUtf8().size());
+        writer.EndObject();
+    }
+
+    writer.EndArray();
+    writer.EndObject();
+
+    return QString::fromUtf8(buf.GetString(), (int)buf.GetSize());
 }
 
 void GraphModel::qmlDeserializeFromJson(const QString &json)
 {
     clear();
-    QJsonDocument doc = QJsonDocument::fromJson(json.toUtf8());
-    if (!doc.isObject()) return;
 
-    QJsonObject rootObj = doc.object();
+    QByteArray raw = json.toUtf8();
+    rapidjson::Document doc;
+    doc.Parse(raw.constData());
 
-    QJsonArray nodesArr = rootObj["nodes"].toArray();
-    for (const auto &val : nodesArr) {
-        QJsonObject obj = val.toObject();
-        QUuid id = strToUuid(obj["id"].toString());
-        if (id.isNull()) continue;
-        NodeData n;
-        n.id = id;
-        n.type = obj["type"].toString();
-        n.position = QPointF(obj["x"].toDouble(), obj["y"].toDouble());
-        QJsonObject dataObj = obj["data"].toObject();
-        for (auto it = dataObj.begin(); it != dataObj.end(); ++it)
-            n.data[it.key()] = it.value().toVariant();
+    if (doc.HasParseError()) {
+        qWarning() << "qmlDeserializeFromJson:" << rapidjson::GetParseError_En(doc.GetParseError());
+        return;
+    }
+    if (!doc.IsObject()) return;
 
-        if (auto *info = nodeTypeInfo(n.type)) {
-            for (auto it = info->inputs.begin(); it != info->inputs.end(); ++it)
-                n.inputs[it.key()] = it.value();
-            for (auto it = info->outputs.begin(); it != info->outputs.end(); ++it)
-                n.outputs[it.key()] = it.value();
+    // ── Nodes ──
+    if (doc.HasMember("nodes") && doc["nodes"].IsArray()) {
+        for (const auto &val : doc["nodes"].GetArray()) {
+            if (!val.IsObject()) continue;
+            const auto &obj = val.GetObject();
+
+            NodeID id = obj["id"].GetUint64();
+            QString type = QString::fromUtf8(obj["type"].GetString(), (int)obj["type"].GetStringLength());
+
+            GraphNode gn;
+            gn.id = id;
+            gn.type = type;
+
+            NodeRuntime rt;
+            rt.evalVersion = 0;
+
+            if (auto *typeInfo = nodeTypeInfo(type)) {
+                for (auto it = typeInfo->inputs.begin(); it != typeInfo->inputs.end(); ++it)
+                    gn.inputs[it.key()] = it.value();
+                for (auto it = typeInfo->outputs.begin(); it != typeInfo->outputs.end(); ++it)
+                    gn.outputs[it.key()] = it.value();
+            }
+
+            NodeUIState ui;
+            ui.x = obj["x"].GetDouble();
+            ui.y = obj["y"].GetDouble();
+
+            // Restore data
+            if (obj.HasMember("data") && obj["data"].IsObject()) {
+                for (const auto &dataMember : obj["data"].GetObject()) {
+                    QString key = QString::fromUtf8(dataMember.name.GetString(),
+                                                    (int)dataMember.name.GetStringLength());
+                    rt.data[key] = jsonValToQVariant(dataMember.value);
+                }
+            }
+
+            m_graphNodes.insert(id, std::move(gn));
+            m_runtimes.insert(id, std::move(rt));
+            m_uiStates.insert(id, std::move(ui));
+
+            emit nodeAdded(id);
+            emit qmlNodeAdded(idToStr(id));
         }
-
-        m_nodes.append(n);
-        emit nodeAdded(n.id);
-        emit qmlNodeAdded(uuidToStr(n.id));
     }
 
-    QJsonArray edgesArr = rootObj["edges"].toArray();
-    for (const auto &val : edgesArr) {
-        QJsonObject obj = val.toObject();
-        EdgeData e;
-        e.id = strToUuid(obj["id"].toString());
-        e.sourceNodeId = strToUuid(obj["sourceNodeId"].toString());
-        e.sourcePort = obj["sourcePort"].toString();
-        e.targetNodeId = strToUuid(obj["targetNodeId"].toString());
-        e.targetPort = obj["targetPort"].toString();
-        m_edges.append(e);
-        emit edgeAdded(e.id);
-        emit qmlEdgeAdded(uuidToStr(e.id));
+    // ── Edges ──
+    if (doc.HasMember("edges") && doc["edges"].IsArray()) {
+        for (const auto &val : doc["edges"].GetArray()) {
+            if (!val.IsObject()) continue;
+            const auto &obj = val.GetObject();
+
+            GraphEdge e;
+            e.id = obj["id"].GetUint64();
+            e.sourceNodeId = obj["sourceNodeId"].GetUint64();
+            e.sourcePort = QString::fromUtf8(obj["sourcePort"].GetString(), (int)obj["sourcePort"].GetStringLength());
+            e.targetNodeId = obj["targetNodeId"].GetUint64();
+            e.targetPort = QString::fromUtf8(obj["targetPort"].GetString(), (int)obj["targetPort"].GetStringLength());
+
+            m_graphEdges.insert(e.id, std::move(e));
+            emit edgeAdded(e.id);
+            emit qmlEdgeAdded(idToStr(e.id));
+        }
     }
+
+    m_topology.invalidate();
 }
 
 void GraphModel::clear()
 {
-    auto edgeIds = m_edges;
-    auto nodeIds = m_nodes;
-    m_edges.clear();
-    m_nodes.clear();
-    for (const auto &e : edgeIds) {
-        emit edgeRemoved(e.id);
-        emit qmlEdgeRemoved(uuidToStr(e.id));
-    }
-    for (const auto &n : nodeIds) {
-        emit nodeRemoved(n.id);
-        emit qmlNodeRemoved(uuidToStr(n.id));
-    }
+    auto edgeSnapshot = m_graphEdges;
+    auto nodeSnapshot = m_graphNodes;
+    m_graphEdges.clear();
+    m_graphNodes.clear();
+    m_runtimes.clear();
+    m_uiStates.clear();
+    m_topology.invalidate();
+    for (const auto &e : edgeSnapshot) { emit edgeRemoved(e.id); emit qmlEdgeRemoved(idToStr(e.id)); }
+    for (const auto &n : nodeSnapshot) { emit nodeRemoved(n.id); emit qmlNodeRemoved(idToStr(n.id)); }
 }
 
 void GraphModel::qmlCopyRegistryFrom(GraphModel *source)
@@ -781,23 +920,10 @@ void GraphModel::qmlCopyRegistryFrom(GraphModel *source)
     m_categories = source->m_categories;
 }
 
-// ── ID conversion ─────────────────────────────────────────
-
-QString GraphModel::uuidToStr(const QUuid &id)
-{
-    return id.toString(QUuid::WithoutBraces);
-}
-
-QUuid GraphModel::strToUuid(const QString &str)
-{
-    return QUuid::fromString(str);
-}
-
 bool GraphModel::qmlSaveToFile(const QString &path)
 {
     QFile file(path);
-    if (!file.open(QIODevice::WriteOnly))
-        return false;
+    if (!file.open(QIODevice::WriteOnly)) return false;
     file.write(qmlSerializeToJson().toUtf8());
     file.close();
     return true;
@@ -806,8 +932,7 @@ bool GraphModel::qmlSaveToFile(const QString &path)
 bool GraphModel::qmlLoadFromFile(const QString &path)
 {
     QFile file(path);
-    if (!file.open(QIODevice::ReadOnly))
-        return false;
+    if (!file.open(QIODevice::ReadOnly)) return false;
     QString json = QString::fromUtf8(file.readAll());
     file.close();
     qmlDeserializeFromJson(json);

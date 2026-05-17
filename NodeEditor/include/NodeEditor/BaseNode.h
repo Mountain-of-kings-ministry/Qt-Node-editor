@@ -5,6 +5,7 @@
 #include <QList>
 #include <QString>
 #include <QHash>
+#include <QImage>
 #include <functional>
 #include "NodeEditor/GraphModel.h"
 
@@ -24,6 +25,12 @@ public:
     virtual QString nodeCategory() const;
     virtual QString nodeSubCategory() const;
     virtual QString displayColor() const;
+
+    // Render preview image (separate from compute for async preview generation)
+    // Returns null QImage if not supported (uses compute() "display" output instead)
+    virtual QImage render(const QVariantMap &inputs, QSize maxSize = {});
+    // Helper: render + base64 encode
+    QString renderToBase64(const QVariantMap &inputs, QSize maxSize = {});
 
     bool isDirty() const;
     void setDirty(bool dirty = true);

@@ -9,6 +9,7 @@ Item {
 
     property var graphModel: null
     property var undoManager: null
+    property var previewManager: null
     property string nodeId: ""
     property var nodeInfo: ({})
     property bool selected: false
@@ -171,6 +172,7 @@ Item {
                     dragStartY = root.y
                     var canvas = findCanvas()
                     if (canvas) canvas.selectNode(root.nodeId)
+                    if (root.previewManager) root.previewManager.setTemporarilyInteracting()
                 } else {
                     if (root.undoManager
                             && (Math.abs(root.x - dragStartX) > 1 || Math.abs(root.y - dragStartY) > 1)) {
@@ -548,7 +550,11 @@ Item {
             Item {
                 width: previewArea.width
                 height: previewHeight()
-                property string displayVal: graphModel ? String(graphModel.qmlNodeData(nodeId, "display") || "") : ""
+                property string displayVal: root.previewManager
+                    ? String(root.previewManager.previewData(root.nodeId) || "")
+                    : graphModel
+                        ? String(graphModel.qmlNodeData(root.nodeId, "display") || "")
+                        : ""
 
                 function previewHeight() {
                     var t = nodeInfo.type
@@ -602,10 +608,16 @@ Item {
                 }
 
                 Connections {
-                    target: graphModel
+                    target: root.previewManager || graphModel
                     function onQmlNodeDataChanged(id, key) {
-                        if (id === nodeId)
-                            displayVal = String(graphModel.qmlNodeData(nodeId, "display") || "")
+                        if (id === root.nodeId)
+                            displayVal = root.previewManager
+                                ? String(root.previewManager.previewData(root.nodeId) || "")
+                                : String(graphModel.qmlNodeData(root.nodeId, "display") || "")
+                    }
+                    function onQmlPreviewReady(id) {
+                        if (id === root.nodeId && root.previewManager)
+                            displayVal = String(root.previewManager.previewData(root.nodeId) || "")
                     }
                 }
             }

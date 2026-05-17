@@ -10,32 +10,37 @@ class TestGraphModel : public QObject {
 private slots:
     void initTestCase()
     {
-        qRegisterMetaType<QUuid>("QUuid");
+        qRegisterMetaType<uint64_t>("uint64_t");
     }
 
     void testAddNode()
     {
         GraphModel model;
-        QUuid id = model.addNode("TestNode", QPointF(100, 200));
-        QVERIFY(!id.isNull());
-        QCOMPARE(model.nodes().size(), 1);
-        QCOMPARE(model.nodes()[0].type, "TestNode");
-        QCOMPARE(model.nodes()[0].position, QPointF(100, 200));
+        NodeID id = model.addNode("TestNode", QPointF(100, 200));
+        QVERIFY(id != 0);
+        QCOMPARE(model.allGraphNodes().size(), (size_t)1);
+        const auto *gn = model.graphNode(id);
+        QVERIFY(gn != nullptr);
+        QCOMPARE(gn->type, "TestNode");
+        const auto *ui = model.nodeUIState(id);
+        QVERIFY(ui != nullptr);
+        QCOMPARE(ui->x, 100.0);
+        QCOMPARE(ui->y, 200.0);
     }
 
     void testRemoveNode()
     {
         GraphModel model;
-        QUuid id = model.addNode("TestNode");
-        QCOMPARE(model.nodes().size(), 1);
+        NodeID id = model.addNode("TestNode");
+        QCOMPARE(model.allGraphNodes().size(), (size_t)1);
         model.removeNode(id);
-        QCOMPARE(model.nodes().size(), 0);
+        QCOMPARE(model.allGraphNodes().size(), (size_t)0);
     }
 
     void testNodeData()
     {
         GraphModel model;
-        QUuid id = model.addNode("TestNode");
+        NodeID id = model.addNode("TestNode");
         model.setNodeData(id, "value", 42);
         QCOMPARE(model.nodeData(id, "value"), QVariant(42));
         QVERIFY(model.nodeData(id, "nonexistent").isNull());
@@ -44,7 +49,7 @@ private slots:
     void testNodePosition()
     {
         GraphModel model;
-        QUuid id = model.addNode("TestNode");
+        NodeID id = model.addNode("TestNode");
         model.setNodePosition(id, QPointF(50, 60));
         QCOMPARE(model.nodePosition(id), QPointF(50, 60));
     }
@@ -52,45 +57,45 @@ private slots:
     void testConnectPorts()
     {
         GraphModel model;
-        QUuid src = model.addNode("Source");
-        QUuid dst = model.addNode("Dest");
-        QUuid edge = model.connectPorts(src, "out", dst, "in");
-        QVERIFY(!edge.isNull());
-        QCOMPARE(model.edges().size(), 1);
+        NodeID src = model.addNode("Source");
+        NodeID dst = model.addNode("Dest");
+        EdgeID edge = model.connectPorts(src, "out", dst, "in");
+        QVERIFY(edge != 0);
+        QCOMPARE(model.allGraphEdges().size(), (size_t)1);
     }
 
     void testDisconnectEdge()
     {
         GraphModel model;
-        QUuid src = model.addNode("Source");
-        QUuid dst = model.addNode("Dest");
-        QUuid edge = model.connectPorts(src, "out", dst, "in");
-        QCOMPARE(model.edges().size(), 1);
+        NodeID src = model.addNode("Source");
+        NodeID dst = model.addNode("Dest");
+        EdgeID edge = model.connectPorts(src, "out", dst, "in");
+        QCOMPARE(model.allGraphEdges().size(), (size_t)1);
         model.disconnectEdge(edge);
-        QCOMPARE(model.edges().size(), 0);
+        QCOMPARE(model.allGraphEdges().size(), (size_t)0);
     }
 
     void testRemoveNodeRemovesEdges()
     {
         GraphModel model;
-        QUuid src = model.addNode("Source");
-        QUuid dst = model.addNode("Dest");
+        NodeID src = model.addNode("Source");
+        NodeID dst = model.addNode("Dest");
         model.connectPorts(src, "out", dst, "in");
-        QCOMPARE(model.edges().size(), 1);
+        QCOMPARE(model.allGraphEdges().size(), (size_t)1);
         model.removeNode(src);
-        QCOMPARE(model.edges().size(), 0);
+        QCOMPARE(model.allGraphEdges().size(), (size_t)0);
     }
 
     void testTopologicalSort()
     {
         GraphModel model;
-        QUuid a = model.addNode("A");
-        QUuid b = model.addNode("B");
-        QUuid c = model.addNode("C");
+        NodeID a = model.addNode("A");
+        NodeID b = model.addNode("B");
+        NodeID c = model.addNode("C");
         model.connectPorts(a, "out", b, "in");
         model.connectPorts(b, "out", c, "in");
 
-        auto sorted = model.topologicalSort();
+        const auto &sorted = model.cachedTopologicalOrder();
         QCOMPARE(sorted.size(), 3);
         QCOMPARE(sorted[0], a);
         QCOMPARE(sorted[1], b);
@@ -100,8 +105,8 @@ private slots:
     void testCycleDetection()
     {
         GraphModel model;
-        QUuid a = model.addNode("A");
-        QUuid b = model.addNode("B");
+        NodeID a = model.addNode("A");
+        NodeID b = model.addNode("B");
         model.connectPorts(a, "out", b, "in");
         model.connectPorts(b, "out", a, "in");
         QVERIFY(model.hasCycles());

@@ -8,7 +8,7 @@ namespace NodeEditor {
 static const int MOVE_NODE_ID = 1001;
 static const int SET_DATA_ID = 1002;
 
-// ── AddNodeCommand ───────────────────────────────────────────
+// ── AddNodeCommand ──────────────────────────────────────────
 
 class AddNodeCommand : public QUndoCommand {
     GraphModel *m_model;
@@ -28,15 +28,15 @@ public:
     }
 
     void redo() override {
-        QUuid id = m_model->addNode(m_type, m_position,
-            m_nodeId.isEmpty() ? QUuid() : GraphModel::strToUuid(m_nodeId));
-        m_nodeId = GraphModel::uuidToStr(id);
+        uint64_t id = m_model->addNode(m_type, m_position,
+            m_nodeId.isEmpty() ? 0 : GraphModel::strToNodeId(m_nodeId));
+        m_nodeId = GraphModel::nodeIdToStr(id);
     }
 
     QString nodeId() const { return m_nodeId; }
 };
 
-// ── RemoveNodeCommand ────────────────────────────────────────
+// ── RemoveNodeCommand ──────────────────────────────────────
 
 class RemoveNodeCommand : public QUndoCommand {
     GraphModel *m_model;
@@ -53,27 +53,38 @@ public:
         : m_model(model), m_nodeId(nodeId)
     {
         setText(QStringLiteral("Remove node"));
-        auto *n = model->node(GraphModel::strToUuid(nodeId));
+        auto *n = model->graphNode(GraphModel::strToNodeId(nodeId));
         if (n) {
             m_type = n->type;
-            m_position = n->position;
-            m_data = n->data;
+            const auto *ui = model->nodeUIState(GraphModel::strToNodeId(nodeId));
+            if (ui) m_position = QPointF(ui->x, ui->y);
+
+            // Snapshot runtime data
+            uint64_t nid = GraphModel::strToNodeId(nodeId);
+            const auto *gn = model->graphNode(nid);
+            if (gn) {
+                const auto &rinputs = gn->inputs;
+                for (auto it = rinputs.begin(); it != rinputs.end(); ++it) {
+                    QVariant val = model->nodeData(nid, it.key());
+                    if (val.isValid()) m_data[it.key()] = val;
+                }
+            }
         }
-        for (const auto &e : model->edges()) {
-            QString eSrc = GraphModel::uuidToStr(e.sourceNodeId);
-            QString eTgt = GraphModel::uuidToStr(e.targetNodeId);
+        for (const auto &e : model->allGraphEdges()) {
+            QString eSrc = GraphModel::nodeIdToStr(e.sourceNodeId);
+            QString eTgt = GraphModel::nodeIdToStr(e.targetNodeId);
             if (eSrc == nodeId || eTgt == nodeId)
                 m_edges.append({eSrc, e.sourcePort, eTgt, e.targetPort});
         }
     }
 
     void undo() override {
-        m_model->addNode(m_type, m_position, GraphModel::strToUuid(m_nodeId));
+        m_model->addNode(m_type, m_position, GraphModel::strToNodeId(m_nodeId));
         for (auto it = m_data.begin(); it != m_data.end(); ++it)
-            m_model->setNodeData(GraphModel::strToUuid(m_nodeId), it.key(), it.value());
+            m_model->setNodeData(GraphModel::strToNodeId(m_nodeId), it.key(), it.value());
         for (const auto &es : m_edges)
-            m_model->connectPorts(GraphModel::strToUuid(es.sourceNode), es.sourcePort,
-                                  GraphModel::strToUuid(es.targetNode), es.targetPort);
+            m_model->connectPorts(GraphModel::strToNodeId(es.sourceNode), es.sourcePort,
+                                  GraphModel::strToNodeId(es.targetNode), es.targetPort);
     }
 
     void redo() override {
@@ -81,7 +92,7 @@ public:
     }
 };
 
-// ── MoveNodeCommand ──────────────────────────────────────────
+// ── MoveNodeCommand ─────────────────────────────────────────
 
 class MoveNodeCommand : public QUndoCommand {
     GraphModel *m_model;
@@ -116,7 +127,7 @@ public:
     }
 };
 
-// ── AddEdgeCommand ───────────────────────────────────────────
+// ── AddEdgeCommand ──────────────────────────────────────────
 
 class AddEdgeCommand : public QUndoCommand {
     GraphModel *m_model;
@@ -139,13 +150,13 @@ public:
     }
 
     void redo() override {
-        QUuid id = m_model->connectPorts(GraphModel::strToUuid(m_sourceNode), m_sourcePort,
-                                          GraphModel::strToUuid(m_targetNode), m_targetPort);
-        m_edgeId = GraphModel::uuidToStr(id);
+        uint64_t id = m_model->connectPorts(GraphModel::strToNodeId(m_sourceNode), m_sourcePort,
+                                            GraphModel::strToNodeId(m_targetNode), m_targetPort);
+        m_edgeId = GraphModel::nodeIdToStr(id);
     }
 };
 
-// ── RemoveEdgeCommand ────────────────────────────────────────
+// ── RemoveEdgeCommand ───────────────────────────────────────
 
 class RemoveEdgeCommand : public QUndoCommand {
     GraphModel *m_model;
@@ -164,8 +175,8 @@ public:
     }
 
     void undo() override {
-        m_model->connectPorts(GraphModel::strToUuid(m_sourceNode), m_sourcePort,
-                              GraphModel::strToUuid(m_targetNode), m_targetPort);
+        m_model->connectPorts(GraphModel::strToNodeId(m_sourceNode), m_sourcePort,
+                              GraphModel::strToNodeId(m_targetNode), m_targetPort);
     }
 
     void redo() override {
@@ -173,7 +184,7 @@ public:
     }
 };
 
-// ── SetNodeDataCommand ───────────────────────────────────────
+// ── SetNodeDataCommand ──────────────────────────────────────
 
 class SetNodeDataCommand : public QUndoCommand {
     GraphModel *m_model;
@@ -210,7 +221,7 @@ public:
     }
 };
 
-// ── UndoManager ──────────────────────────────────────────────
+// ── UndoManager ─────────────────────────────────────────────
 
 UndoManager::UndoManager(QObject *parent)
     : QObject(parent)
@@ -274,7 +285,7 @@ QString UndoManager::qmlConnectPorts(const QString &sourceNode, const QString &s
 {
     auto *cmd = new AddEdgeCommand(m_model, sourceNode, sourcePort, targetNode, targetPort);
     m_stack->push(cmd);
-    return {}; // edge ID not needed by callers
+    return {};
 }
 
 void UndoManager::qmlDisconnectEdge(const QString &edgeId)

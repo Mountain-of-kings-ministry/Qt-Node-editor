@@ -9,6 +9,7 @@ Item {
 
     property var graphModel: null
     property var undoManager: null
+    property var previewManager: null
 
     property alias world: world
 
@@ -33,6 +34,8 @@ Item {
 
     signal nodeSelected(string nodeId)
     signal nodeDeselected()
+    signal interactionStarted()
+    signal interactionEnded()
 
     QtObject {
         id: nodeLayout
@@ -277,6 +280,7 @@ Item {
             delegate: Node {
                 graphModel: root.graphModel
                 undoManager: root.undoManager
+                previewManager: root.previewManager
                 nodeId: model.nodeId
                 selected: root.selectedNodeIds.indexOf(model.nodeId) >= 0
             }
@@ -323,6 +327,7 @@ Item {
                 (mouse.button === Qt.LeftButton && root.selectMode === "default" && hitNodeId === "")) {
                 isPanning = true
                 cursorShape = Qt.ClosedHandCursor
+                root.interactionStarted()
             } else if (mouse.button === Qt.LeftButton && root.selectMode === "box") {
                 isBoxSelecting = true
                 boxSelectRect.x = mouse.x
@@ -361,6 +366,7 @@ Item {
             if (isPanning) {
                 isPanning = false
                 cursorShape = Qt.ArrowCursor
+                root.interactionEnded()
             } else if (isBoxSelecting) {
                 isBoxSelecting = false
                 boxSelectRect.boxSelectActive = false

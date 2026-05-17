@@ -302,7 +302,7 @@ public:
         return {{PortType::String, "display", QVariant()},
                 {PortType::Color, "color", QVariant()}};
     }
-    QVariantMap compute(const QVariantMap &inputs) override {
+    QImage render(const QVariantMap &inputs, QSize = {}) override {
         bool val = inputs.value("value").toBool();
         QImage img(60, 30, QImage::Format_ARGB32);
         img.fill(Qt::transparent);
@@ -313,7 +313,12 @@ public:
         p.setPen(Qt::NoPen);
         p.drawEllipse(15, 0, 30, 30);
         p.end();
-        return {{"display", imageToBase64(img)}, {"color", c}};
+        return img;
+    }
+    QVariantMap compute(const QVariantMap &inputs) override {
+        bool val = inputs.value("value").toBool();
+        QColor c = val ? QColor("#00B894") : QColor("#636E72");
+        return {{"display", renderToBase64(inputs)}, {"color", c}};
     }
 };
 
@@ -359,13 +364,13 @@ public:
     QList<PortInfo> outputSpec() const override {
         return {{PortType::String, "display", QVariant()}};
     }
-    QVariantMap compute(const QVariantMap &inputs) override {
+    QImage render(const QVariantMap &inputs, QSize = {}) override {
         QJsonArray arr = QJsonDocument::fromJson(inputs.value("series").toString().toUtf8()).array();
         QVector<double> vals;
         double mn = 0, mx = 1;
         for (const auto &v : arr) { double d = v.toDouble(); vals.append(d); mn = qMin(mn, d); mx = qMax(mx, d); }
         if (mx - mn < 0.001) { mn -= 0.5; mx += 0.5; }
-        if (vals.isEmpty()) return {{"display", "No data"}};
+        if (vals.isEmpty()) return {};
 
         QImage img(160, 80, QImage::Format_ARGB32);
         img.fill(QColor("#1E1E1E"));
@@ -385,6 +390,11 @@ public:
             p.drawLine(QPointF(x1, y1), QPointF(x2, y2));
         }
         p.end();
+        return img;
+    }
+    QVariantMap compute(const QVariantMap &inputs) override {
+        QImage img = render(inputs);
+        if (img.isNull()) return {{"display", "No data"}};
         return {{"display", imageToBase64(img)}};
     }
 };
@@ -404,7 +414,7 @@ public:
     QList<PortInfo> outputSpec() const override {
         return {{PortType::String, "display", QVariant()}};
     }
-    QVariantMap compute(const QVariantMap &inputs) override {
+    QImage render(const QVariantMap &inputs, QSize = {}) override {
         QJsonArray xa = QJsonDocument::fromJson(inputs.value("xValues").toString().toUtf8()).array();
         QJsonArray ya = QJsonDocument::fromJson(inputs.value("yValues").toString().toUtf8()).array();
         QVector<QPointF> pts;
@@ -417,7 +427,7 @@ public:
         }
         if (mxx - mnx < 0.001) { mnx -= 0.5; mxx += 0.5; }
         if (mxy - mny < 0.001) { mny -= 0.5; mxy += 0.5; }
-        if (pts.isEmpty()) return {{"display", "No data"}};
+        if (pts.isEmpty()) return {};
 
         QImage img(160, 80, QImage::Format_ARGB32);
         img.fill(QColor("#1E1E1E"));
@@ -435,6 +445,11 @@ public:
             p.drawEllipse(QPointF(x, y), 2.5, 2.5);
         }
         p.end();
+        return img;
+    }
+    QVariantMap compute(const QVariantMap &inputs) override {
+        QImage img = render(inputs);
+        if (img.isNull()) return {{"display", "No data"}};
         return {{"display", imageToBase64(img)}};
     }
 };
@@ -454,9 +469,9 @@ public:
     QList<PortInfo> outputSpec() const override {
         return {{PortType::String, "display", QVariant()}};
     }
-    QVariantMap compute(const QVariantMap &inputs) override {
+    QImage render(const QVariantMap &inputs, QSize = {}) override {
         QJsonArray va = QJsonDocument::fromJson(inputs.value("values").toString().toUtf8()).array();
-        if (va.isEmpty()) return {{"display", "No data"}};
+        if (va.isEmpty()) return {};
         double mx = 1;
         for (const auto &v : va) mx = qMax(mx, v.toDouble());
         if (mx < 0.001) mx = 1;
@@ -474,6 +489,11 @@ public:
             p.fillRect(QRectF(x, pad + h - bh, bw, bh), colors[i % 8]);
         }
         p.end();
+        return img;
+    }
+    QVariantMap compute(const QVariantMap &inputs) override {
+        QImage img = render(inputs);
+        if (img.isNull()) return {{"display", "No data"}};
         return {{"display", imageToBase64(img)}};
     }
 };
@@ -492,12 +512,12 @@ public:
     QList<PortInfo> outputSpec() const override {
         return {{PortType::String, "display", QVariant()}};
     }
-    QVariantMap compute(const QVariantMap &inputs) override {
+    QImage render(const QVariantMap &inputs, QSize = {}) override {
         QJsonObject obj = QJsonDocument::fromJson(inputs.value("segments").toString().toUtf8()).object();
-        if (obj.isEmpty()) return {{"display", "No data"}};
+        if (obj.isEmpty()) return {};
         double total = 0;
         for (auto it = obj.begin(); it != obj.end(); ++it) total += it.value().toDouble();
-        if (total < 0.001) return {{"display", "No data"}};
+        if (total < 0.001) return {};
 
         QImage img(100, 80, QImage::Format_ARGB32);
         img.fill(Qt::transparent);
@@ -515,6 +535,11 @@ public:
             startAngle += span;
         }
         p.end();
+        return img;
+    }
+    QVariantMap compute(const QVariantMap &inputs) override {
+        QImage img = render(inputs);
+        if (img.isNull()) return {{"display", "No data"}};
         return {{"display", imageToBase64(img)}};
     }
 };
@@ -534,10 +559,10 @@ public:
     QList<PortInfo> outputSpec() const override {
         return {{PortType::String, "display", QVariant()}};
     }
-    QVariantMap compute(const QVariantMap &inputs) override {
+    QImage render(const QVariantMap &inputs, QSize = {}) override {
         QJsonArray arr = QJsonDocument::fromJson(inputs.value("data").toString().toUtf8()).array();
         int nb = qBound(1, inputs.value("bins").toInt(), 20);
-        if (arr.isEmpty()) return {{"display", "No data"}};
+        if (arr.isEmpty()) return {};
         double mn = arr[0].toDouble(), mx = arr[0].toDouble();
         for (const auto &v : arr) { double d = v.toDouble(); mn = qMin(mn, d); mx = qMax(mx, d); }
         if (mx - mn < 0.001) { mn -= 0.5; mx += 0.5; }
@@ -560,6 +585,11 @@ public:
             p.fillRect(QRectF(x, pad + h - bh, bw, bh), QColor("#FF6B6B"));
         }
         p.end();
+        return img;
+    }
+    QVariantMap compute(const QVariantMap &inputs) override {
+        QImage img = render(inputs);
+        if (img.isNull()) return {{"display", "No data"}};
         return {{"display", imageToBase64(img)}};
     }
 };
@@ -578,11 +608,11 @@ public:
     QList<PortInfo> outputSpec() const override {
         return {{PortType::String, "display", QVariant()}};
     }
-    QVariantMap compute(const QVariantMap &inputs) override {
+    QImage render(const QVariantMap &inputs, QSize = {}) override {
         QJsonArray rows = QJsonDocument::fromJson(inputs.value("data").toString().toUtf8()).array();
-        if (rows.isEmpty()) return {{"display", "No data"}};
+        if (rows.isEmpty()) return {};
         int rcnt = rows.size(), ccnt = rows[0].toArray().size();
-        if (rcnt < 1 || ccnt < 1) return {{"display", "No data"}};
+        if (rcnt < 1 || ccnt < 1) return {};
 
         QVector<double> vals;
         double mn = 1e9, mx = -1e9;
@@ -605,6 +635,11 @@ public:
             }
         }
         p.end();
+        return img;
+    }
+    QVariantMap compute(const QVariantMap &inputs) override {
+        QImage img = render(inputs);
+        if (img.isNull()) return {{"display", "No data"}};
         return {{"display", imageToBase64(img)}};
     }
 };
@@ -693,7 +728,7 @@ public:
     QList<PortInfo> outputSpec() const override {
         return {{PortType::String, "display", QVariant()}};
     }
-    QVariantMap compute(const QVariantMap &inputs) override {
+    QImage render(const QVariantMap &inputs, QSize = {}) override {
         double v = qBound(0.0, inputs.value("value").toDouble(), 1.0);
         QImage img(160, 20, QImage::Format_ARGB32);
         img.fill(QColor("#2D2D2D"));
@@ -706,7 +741,10 @@ public:
         p.setFont(QFont("monospace", 8));
         p.drawText(QRectF(0, 0, 160, 20), Qt::AlignCenter, QString("%1%").arg((int)(v * 100)));
         p.end();
-        return {{"display", imageToBase64(img)}};
+        return img;
+    }
+    QVariantMap compute(const QVariantMap &inputs) override {
+        return {{"display", imageToBase64(render(inputs))}};
     }
 };
 
@@ -724,7 +762,7 @@ public:
     QList<PortInfo> outputSpec() const override {
         return {{PortType::String, "display", QVariant()}};
     }
-    QVariantMap compute(const QVariantMap &inputs) override {
+    QImage render(const QVariantMap &inputs, QSize = {}) override {
         double v = qBound(0.0, inputs.value("value").toDouble(), 1.0);
         QImage img(100, 80, QImage::Format_ARGB32);
         img.fill(Qt::transparent);
@@ -745,7 +783,10 @@ public:
         p.setFont(QFont("monospace", 8));
         p.drawText(r, Qt::AlignBottom | Qt::AlignHCenter, QString("%1%").arg((int)(v * 100)));
         p.end();
-        return {{"display", imageToBase64(img)}};
+        return img;
+    }
+    QVariantMap compute(const QVariantMap &inputs) override {
+        return {{"display", imageToBase64(render(inputs))}};
     }
 };
 
@@ -763,7 +804,7 @@ public:
     QList<PortInfo> outputSpec() const override {
         return {{PortType::String, "display", QVariant()}};
     }
-    QVariantMap compute(const QVariantMap &inputs) override {
+    QImage render(const QVariantMap &inputs, QSize = {}) override {
         double deg = fmod(inputs.value("degrees").toDouble(), 360.0);
         if (deg < 0) deg += 360;
         QImage img(80, 80, QImage::Format_ARGB32);
@@ -788,7 +829,10 @@ public:
         arrow << QPointF(0, -30) << QPointF(-6, 0) << QPointF(6, 0);
         p.drawPolygon(arrow);
         p.end();
-        return {{"display", imageToBase64(img)}};
+        return img;
+    }
+    QVariantMap compute(const QVariantMap &inputs) override {
+        return {{"display", imageToBase64(render(inputs))}};
     }
 };
 
@@ -846,10 +890,11 @@ public:
     QList<PortInfo> outputSpec() const override {
         return {{PortType::String, "display", QVariant()}};
     }
+    QImage render(const QVariantMap &inputs, QSize maxSize = {}) override;
     QVariantMap compute(const QVariantMap &inputs) override;
 };
 
-inline QVariantMap LEDMatrixDisplayNode::compute(const QVariantMap &inputs)
+inline QImage LEDMatrixDisplayNode::render(const QVariantMap &inputs, QSize)
 {
     int cols = qBound(1, inputs.value("width").toInt(), 64);
     int rows = qBound(1, inputs.value("height").toInt(), 32);
@@ -866,9 +911,7 @@ inline QVariantMap LEDMatrixDisplayNode::compute(const QVariantMap &inputs)
     QImage pix(img_w, img_h, QImage::Format_ARGB32);
     pix.fill(bg);
 
-    if (text.isEmpty()) {
-        return {{"display", imageToBase64(pix)}};
-    }
+    if (text.isEmpty()) return pix;
 
     // === Text Layer ===
     QImage textLayer(cols, rows, QImage::Format_ARGB32);
@@ -891,10 +934,8 @@ inline QVariantMap LEDMatrixDisplayNode::compute(const QVariantMap &inputs)
     QRect textRect(0, 0, cols, rows);
     QFontMetrics fm(font);
     QString displayText = text;
-
-    if (fm.horizontalAdvance(text) > cols) {
+    if (fm.horizontalAdvance(text) > cols)
         displayText = text.left(cols / 2);
-    }
 
     tp.drawText(textRect, Qt::AlignCenter, displayText);
     tp.end();
@@ -913,22 +954,26 @@ inline QVariantMap LEDMatrixDisplayNode::compute(const QVariantMap &inputs)
 
             QColor color = isLit ? fg : bg;
 
-            // Main LED
             p.setBrush(color);
             p.setPen(Qt::NoPen);
             p.drawEllipse(QPointF(x + ledSize/2.0, y + ledSize/2.0),
-                         ledSize/2.0 - 0.5, ledSize/2.0 - 0.5);
+                          ledSize/2.0 - 0.5, ledSize/2.0 - 0.5);
 
-            // Glow / Highlight effect (only on lit LEDs)
             if (isLit) {
-                p.setBrush(fg.lighter(160));        // brighter inner glow
+                p.setBrush(fg.lighter(160));
                 p.drawEllipse(QPointF(x + ledSize/2.0, y + ledSize/2.0),
-                             ledSize/2.0 - 2.8, ledSize/2.0 - 2.8);
+                              ledSize/2.0 - 2.8, ledSize/2.0 - 2.8);
             }
         }
     }
+    p.end();
 
-    return {{"display", imageToBase64(pix)}};
+    return pix;
+}
+
+inline QVariantMap LEDMatrixDisplayNode::compute(const QVariantMap &inputs)
+{
+    return {{"display", renderToBase64(inputs)}};
 }
 
 // ══════════════════════════════════════════════════════════

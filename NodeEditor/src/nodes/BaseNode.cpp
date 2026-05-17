@@ -1,6 +1,16 @@
 #include "NodeEditor/BaseNode.h"
+#include <QBuffer>
 
 namespace NodeEditor {
+
+static QString imageToBase64(const QImage &img)
+{
+    QByteArray bytes;
+    QBuffer buffer(&bytes);
+    buffer.open(QIODevice::WriteOnly);
+    img.save(&buffer, "PNG");
+    return QString::fromLatin1(bytes.toBase64());
+}
 
 QHash<QString, BaseNode::Factory> BaseNode::s_registry;
 
@@ -38,6 +48,18 @@ bool BaseNode::isDirty() const
 void BaseNode::setDirty(bool dirty)
 {
     m_dirty = dirty;
+}
+
+QImage BaseNode::render(const QVariantMap &, QSize)
+{
+    return {};
+}
+
+QString BaseNode::renderToBase64(const QVariantMap &inputs, QSize maxSize)
+{
+    QImage img = render(inputs, maxSize);
+    if (img.isNull()) return {};
+    return imageToBase64(img);
 }
 
 void BaseNode::registerType(const QString &type, Factory factory)

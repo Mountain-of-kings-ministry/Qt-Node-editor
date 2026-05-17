@@ -26,6 +26,7 @@ Item {
     property bool showTopBar: true
     property bool showBottomBar: true
     property bool framelessWindow: false
+    property var previewManager: null
 
     signal nodeSelected(string nodeId)
     signal nodeDeselected()
@@ -248,6 +249,7 @@ Item {
                 anchors.fill: parent
                 graphModel: effectiveGraphModel
                 undoManager: effectiveUndoManager
+                previewManager: root.previewManager
 
                 onNodeSelected: function(nodeId) {
                     root.selectedNodeId = nodeId
@@ -259,6 +261,15 @@ Item {
                     root.selectedNodeId = ""
                     root.nodeDeselected()
                     propertiesPanel.nodeId = ""
+                }
+
+                onInteractionStarted: {
+                    if (root.previewManager)
+                        root.previewManager.setInteracting(true)
+                }
+                onInteractionEnded: {
+                    if (root.previewManager)
+                        root.previewManager.setInteracting(false)
                 }
             }
         }
