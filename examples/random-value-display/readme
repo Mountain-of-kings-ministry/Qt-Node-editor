@@ -1,7 +1,0 @@
-this project will contain two three nodes
- random number generator
-the random number will be generated between two vallues and it will be updating per millisecounds
-the display will display it and be updating constantly as the value changes
-
-make a time node that updates ecery millisecounds so we can battle test the stability.
-we will use led matrix node to see what it can do on that change rate
