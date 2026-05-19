@@ -1,8 +1,6 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
-#include <QTimer>
-#include <QElapsedTimer>
 #include <QDebug>
 #include "NodeEditor/GraphModel.h"
 #include "NodeEditor/DataFlowEngine.h"
@@ -10,7 +8,6 @@
 #include "NodeEditor/BaseNode.h"
 #include "NodeEditor/DefaultNodes.h"
 #include "NodeEditor/PreviewManager.h"
-#include "RandomValueNodes.h"
 
 using namespace NodeEditor;
 
@@ -24,33 +21,25 @@ int main(int argc, char *argv[])
 
     GraphModel model;
     registerDefaultNodeTypes(&model);
-    registerRandomValueNodeTypes(&model);
 
     DataFlowEngine engine(&model);
-    engine.setAutoCompute(true);
+    engine.setAutoCompute(false);
 
     PreviewManager previewManager(&model, &engine);
-    previewManager.setRenderBudget(1);
-    previewManager.setMaxCacheSize(100);
 
-    // Build the test graph programmatically
-    NodeID timerId = model.addNode("system/time/msTick", QPointF(50, 50));
-    NodeID randomId = model.addNode("utility/random/range", QPointF(280, 50));
-    NodeID ledId = model.addNode("output/display/ledMatrix", QPointF(510, 50));
-
-    // Wire: timer.tick -> random.trigger
-    model.connectPorts(timerId, QStringLiteral("tick"),
-                       randomId, QStringLiteral("trigger"));
-
-    // Wire: random.value -> ledMatrix.value
-    model.connectPorts(randomId, QStringLiteral("value"),
+    // Graph: Constant → LED Matrix
+    NodeID constId = model.addNode("utility/value/constant", QPointF(50, 50));
+    NodeID ledId = model.addNode("output/display/ledMatrix", QPointF(280, 50));
+    model.connectPorts(constId, QStringLiteral("output"),
                        ledId, QStringLiteral("value"));
-
-    // Set LED matrix display size to 32x16 for better visual
+    model.setNodeData(constId, QStringLiteral("value"), 42.0);
     model.setNodeData(ledId, QStringLiteral("width"), 32);
-    model.setNodeData(ledId, QStringLiteral("height"), 16);
+    model.setNodeData(ledId, QStringLiteral("height"), 8);
 
-    // Expose to QML
+    Q_UNUSED(constId)
+
+    qDebug() << "Graph setup complete, loading QML...";
+
     QQmlApplicationEngine qmlEngine;
     qmlEngine.rootContext()->setContextProperty("_nodeTypeRegistry", &model);
     qmlEngine.rootContext()->setContextProperty("_previewManager", &previewManager);
@@ -65,32 +54,7 @@ int main(int argc, char *argv[])
 
     qmlEngine.loadFromModule("RandomValueDisplay", "Main");
 
-    // Battle test: drive timer at 1ms interval
-    uint64_t tickCounter = 0;
-    QElapsedTimer perfTimer;
-    perfTimer.start();
-    int frameCount = 0;
-
-    QTimer driveTimer;
-    QObject::connect(&driveTimer, &QTimer::timeout, [&]() {
-        tickCounter++;
-        model.setNodeData(timerId, QStringLiteral("trigger"),
-                          static_cast<double>(tickCounter));
-
-        // Request preview for the LED matrix node each tick
-        previewManager.requestPreview(idToStr(ledId));
-
-        frameCount++;
-        if (perfTimer.elapsed() >= 1000) {
-            qDebug() << "Random Value Display:"
-                     << frameCount << "fps,"
-                     << "cache size:" << previewManager.maxCacheSize();
-            frameCount = 0;
-            perfTimer.restart();
-        }
-    });
-    driveTimer.setTimerType(Qt::PreciseTimer);
-    driveTimer.start(1);
+    qDebug() << "QML loaded, entering event loop...";
 
     return QCoreApplication::exec();
 }
